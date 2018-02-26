@@ -3,3 +3,4 @@ This repository contains the code ncessary for Daisy to track objects and indivi
 
 ## References/Links (Will Organize Later)
 [ageitgey/face_recognition](https://github.com/ageitgey/face_recognition)
+[Object Tracking using OpenCV](https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/)
