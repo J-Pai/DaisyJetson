@@ -6,7 +6,7 @@ def scale_frame(frame, scale):
     rgb_small_frame = small_frame[:, :, ::-1]
     return rgb_small_frame
 
-def identify_person(faces, person, cam_num, scale_factor = 1):
+def identify_person(faces, person, cam_num = 1, scale_factor = 1):
     video_capture = cv2.VideoCapture(cam_num)
 
     if not video_capture.isOpened():
@@ -76,7 +76,7 @@ def identify_person(faces, person, cam_num, scale_factor = 1):
     video_capture.release()
     cv2.destroyAllWindows()
 
-def track_person(type_num, cam_num):
+def track_object(type_num = 0, cam_num = 1):
     tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN']
     tracker_type = tracker_types[type_num]
 
