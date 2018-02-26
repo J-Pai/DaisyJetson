@@ -76,10 +76,7 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
     video_capture.release()
     cv2.destroyAllWindows()
 
-def track_object(type_num = 0, cam_num = 1):
-    tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN']
-    tracker_type = tracker_types[type_num]
-
+def track_object(tracker_type = 'BOOSTING', cam_num = 1):
     if tracker_type == 'BOOSTING':
         tracker = cv2.TrackerBoosting_create()
     if tracker_type == 'MIL':
