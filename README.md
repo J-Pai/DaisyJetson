@@ -6,8 +6,8 @@ This repository contains the code ncessary for Daisy to track objects and indivi
 
 [Object Tracking using OpenCV](https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/)
 
-[Goturn Documentation](https://github.com/davheld/GOTURN)
+[GOTURN Documentation](https://github.com/davheld/GOTURN)
 
-[Goturn Pretrained Model](https://github.com/opencv/opencv_extra/tree/c4219d5eb3105ed8e634278fad312a1a8d2c182d/testdata/tracking)
+[GOTURN Pretrained Model](https://github.com/opencv/opencv_extra/tree/c4219d5eb3105ed8e634278fad312a1a8d2c182d/testdata/tracking)
 
 Directions: Download all files. Combine zip parts into 1 zip file. Unzip model file. Place files in the directory that contains holds this repository.
