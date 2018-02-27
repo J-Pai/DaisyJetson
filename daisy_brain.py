@@ -19,6 +19,6 @@ if __name__ == "__main__":
     or equal to 1.
     """
     #daisy_test.identify_person(faces, "JessePai", scale_factor = 1)
-    #daisy_test.track_object(tracker_types[7])
-    daisy_test.track_object_all_types()
+    daisy_test.track_object(tracker_types[7])
+    #daisy_test.track_object_all_types()
     #daisy_test.track_and_id_face(faces, "JessePai")
