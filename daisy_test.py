@@ -169,7 +169,7 @@ def track_object_all_types(cam_num = 1, \
             if not tracker_ret_and_bbox[tracker][0]:
                 failedTrackers += tracker + " "
 
-        cv2.putText(frame, failedTrackers, (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,175,0), 1)
+        cv2.putText(frame, failedTrackers, (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
 
         cv2.imshow("Tracking", frame)
 
