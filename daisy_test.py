@@ -63,7 +63,7 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
 
             cv2.rectangle(frame, (left, bottom + 20), (right, bottom), (0, 0, 255), cv2.FILLED)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, name, (left + 3, bottom + 14), font, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, name, (left + 3, bottom + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
 
         cv2.putText(frame, "FPS: " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
@@ -76,7 +76,8 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
     video_capture.release()
     cv2.destroyAllWindows()
 
-def track_object(tracker_type = 'BOOSTING', cam_num = 1):
+def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
+    tracker = None;
     if tracker_type == 'BOOSTING':
         tracker = cv2.TrackerBoosting_create()
     if tracker_type == 'MIL':
@@ -89,6 +90,17 @@ def track_object(tracker_type = 'BOOSTING', cam_num = 1):
         tracker = cv2.TrackerMedianFlow_create()
     if tracker_type == 'GOTURN':
         tracker = cv2.TrackerGOTURN_create()
+    if tracker_type == 'MOSSE':
+        tracker = cv2.TrackerMOSSE_create()
+
+    ret = tracker.init(frame, bbox)
+
+    if not ret:
+        return None
+
+    return tracker
+
+def track_object(tracker_type = 'BOOSTING', cam_num = 1):
 
     video_capture = cv2.VideoCapture(cam_num)
 
@@ -99,7 +111,7 @@ def track_object(tracker_type = 'BOOSTING', cam_num = 1):
     ret, frame = video_capture.read()
     if not ret:
         print("Cannot read video file")
-        sys.ext()
+        sys.exit()
 
     print("Press q when image is ready")
     while True:
@@ -112,7 +124,11 @@ def track_object(tracker_type = 'BOOSTING', cam_num = 1):
 
     bbox = cv2.selectROI(frame, False)
 
-    ret = tracker.init(frame, bbox)
+    tracker = init_tracker(frame, bbox, tracker_type)
+
+    if not tracker:
+        print("Tracker not recognized")
+        sys.exit()
 
     while True:
         ret, frame = video_capture.read()
@@ -138,4 +154,104 @@ def track_object(tracker_type = 'BOOSTING', cam_num = 1):
 
     video_capture.release()
     cv2.destroyAllWindows()
+
+def draw_bbox(valid, frame, bbox, color, text):
+    if not valid:
+        return
+    p1 = (int(bbox[0]), int(bbox[1]))
+    p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+    cv2.rectangle(frame, p1, p2, color, 2, 1)
+    cv2.putText(frame, text, (int(bbox[0]) + 3, int(bbox[1] + bbox[3]) + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
+def track_object_all_types(cam_num = 1):
+    video_capture = cv2.VideoCapture(cam_num)
+
+    if not video_capture.isOpened():
+        print("Could not open video")
+        return
+
+    ret, frame = video_capture.read()
+    if not ret:
+        print("Cannot read video file")
+        sys.exit()
+
+    print("Press q when image is ready")
+    while True:
+        ret, frame = video_capture.read()
+        cv2.imshow("Image Prep", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cv2.destroyAllWindows()
+
+    bbox = cv2.selectROI(frame, False)
+
+    trackerB = init_tracker(frame, bbox, "BOOSTING")
+    trackerMIL = init_tracker(frame, bbox, "MIL")
+    trackerKCF = init_tracker(frame, bbox, "KCF")
+    trackerTLD = init_tracker(frame, bbox, "TLD")
+    trackerMF = init_tracker(frame, bbox, "MEDIANFLOW")
+    trackerGOT = init_tracker(frame, bbox, "GOTURN")
+    trackerMOS = init_tracker(frame, bbox, "MOSSE")
+
+    while True:
+        ret, frame = video_capture.read()
+        if not ret:
+            break
+
+        timer = cv2.getTickCount()
+
+        retB, bboxB = trackerB.update(frame)
+        retMIL, bboxMIL = trackerMIL.update(frame)
+        retKCF, bboxKCF = trackerKCF.update(frame)
+        retTLD, bboxTLD = trackerTLD.update(frame)
+        retMF, bboxMF = trackerMF.update(frame)
+        retGOT, bboxGOT = trackerGOT.update(frame)
+        retMOS, bboxMOS = trackerMOS.update(frame)
+
+        fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
+
+        draw_bbox(retB, frame, bboxB, (255, 0, 0), "Boosting")
+        draw_bbox(retMIL, frame, bboxMIL, (0, 255, 0), "MIL")
+        draw_bbox(retKCF, frame, bboxKCF, (0, 0, 255), "KCF")
+        draw_bbox(retTLD, frame, bboxTLD, (0, 0, 0), "TLD")
+        draw_bbox(retMF, frame, bboxMF, (255,255,255), "MF")
+        draw_bbox(retGOT, frame, bboxGOT, (100,100,100), "GOT")
+        draw_bbox(retMOS, frame, bboxMOS, (0,255,255), "MOSSE")
+
+        cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1);
+
+        failedTrackers = "FAILED: "
+        if not retB:
+            failedTrackers += "BOOSTING "
+        if not retMIL:
+            failedTrackers += "MIL "
+        if not retKCF:
+            failedTrackers += "KCF "
+        if not retTLD:
+            failedTrackers += "TLD "
+        if not retMF:
+            failedTrackers += "MF "
+        if not retGOT:
+            failedTrackers += "GOT "
+        if not retMOS:
+            failedTrackers += "MOS "
+
+
+        cv2.putText(frame, failedTrackers, (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,175,0), 1)
+
+        cv2.imshow("Tracking", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
+
+
+
+def track_and_id_face(faces, person, tracker_type = "BOOSTING", cam_num = 1, scale_factor = 1):
+    print("NOT YET DEVELOPED")
+
+
 

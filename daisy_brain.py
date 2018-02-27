@@ -9,8 +9,10 @@ faces = {
 }
 scale_factor = 1
 
-tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN']
+tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE']
 
 if __name__ == "__main__":
     #daisy_test.identify_person(faces, "JessePai")
-    daisy_test.track_object(tracker_types[4], 1)
+    #daisy_test.track_object(tracker_types[6])
+    daisy_test.track_object_all_types()
+    #daisy_test.track_and_id_face(faces, "JessePai")
