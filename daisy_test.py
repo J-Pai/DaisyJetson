@@ -90,6 +90,8 @@ def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
         tracker = cv2.TrackerGOTURN_create()
     if tracker_type == "MOSSE":
         tracker = cv2.TrackerMOSSE_create()
+    if tracker_type == "CSRT":
+        tracker = cv2.TrackerCSRT_create()
 
     ret = tracker.init(frame, bbox)
 
@@ -97,6 +99,26 @@ def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
         return None
 
     return tracker
+
+def camera_prep(video_capture):
+    ret, frame = video_capture.read()
+    if not ret:
+        print("Cannot read video file")
+        sys.exit()
+    print("Press q when image is ready")
+    while True:
+        ret, frame = video_capture.read()
+        cv2.imshow("Image Prep", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+    return ret, frame
+
+
+def select_ROI(frame):
+    bbox = cv2.selectROI(frame, False)
+    cv2.destroyAllWindows()
+    return bbox;
 
 def track_object(tracker_type = "BOOSTING", cam_num = 1):
 
@@ -106,21 +128,9 @@ def track_object(tracker_type = "BOOSTING", cam_num = 1):
         print("Could not open video")
         return
 
-    ret, frame = video_capture.read()
-    if not ret:
-        print("Cannot read video file")
-        sys.exit()
+    ret, frame = camera_prep(video_capture)
 
-    print("Press q when image is ready")
-    while True:
-        ret, frame = video_capture.read()
-        cv2.imshow("Image Prep", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cv2.destroyAllWindows()
-
-    bbox = cv2.selectROI(frame, False)
+    bbox = select_ROI(frame)
 
     tracker = init_tracker(frame, bbox, tracker_type)
 
@@ -164,25 +174,9 @@ def draw_bbox(valid, frame, bbox, color, text):
 def track_object_all_types(cam_num = 1):
     video_capture = cv2.VideoCapture(cam_num)
 
-    if not video_capture.isOpened():
-        print("Could not open video")
-        return
+    ret, frame = camera_prep(video_capture)
 
-    ret, frame = video_capture.read()
-    if not ret:
-        print("Cannot read video file")
-        sys.exit()
-
-    print("Press q when image is ready")
-    while True:
-        ret, frame = video_capture.read()
-        cv2.imshow("Image Prep", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cv2.destroyAllWindows()
-
-    bbox = cv2.selectROI(frame, False)
+    bbox = select_ROI(frame)
 
     trackerB = init_tracker(frame, bbox, "BOOSTING")
     trackerMIL = init_tracker(frame, bbox, "MIL")
@@ -191,6 +185,7 @@ def track_object_all_types(cam_num = 1):
     trackerMF = init_tracker(frame, bbox, "MEDIANFLOW")
     trackerGOT = init_tracker(frame, bbox, "GOTURN")
     trackerMOS = init_tracker(frame, bbox, "MOSSE")
+    trackerCSRT = init_tracker(frame, bbox, "CSRT")
 
     while True:
         ret, frame = video_capture.read()
@@ -206,6 +201,7 @@ def track_object_all_types(cam_num = 1):
         retMF, bboxMF = trackerMF.update(frame)
         retGOT, bboxGOT = trackerGOT.update(frame)
         retMOS, bboxMOS = trackerMOS.update(frame)
+        retCSRT, bboxCSRT = trackerCSRT.update(frame)
 
         fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
@@ -216,6 +212,7 @@ def track_object_all_types(cam_num = 1):
         draw_bbox(retMF, frame, bboxMF, (255,255,255), "MF")
         draw_bbox(retGOT, frame, bboxGOT, (100,100,100), "GOT")
         draw_bbox(retMOS, frame, bboxMOS, (0,255,255), "MOSSE")
+        draw_bbox(retCSRT, frame, bboxCSRT, (140,0,123), "CSRT")
 
         cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1);
 
@@ -234,6 +231,8 @@ def track_object_all_types(cam_num = 1):
             failedTrackers += "GOT "
         if not retMOS:
             failedTrackers += "MOS "
+        if not retCSRT:
+            failedTrackers += "CSRT "
 
 
         cv2.putText(frame, failedTrackers, (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,175,0), 1)
