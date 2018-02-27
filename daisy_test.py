@@ -1,10 +1,11 @@
 import cv2
 import face_recognition
 
-def scale_frame(frame, scale):
-    small_frame = cv2.resize(frame, (0,0), fx=scale, fy=scale)
-    rgb_small_frame = small_frame[:, :, ::-1]
-    return rgb_small_frame
+def scale_frame(frame, scale = 1):
+    if (scale == 1):
+        return frame
+    return cv2.resize(frame, (0,0), fx=scale, fy=scale)
+    # return small_frame[:, :, ::-1]
 
 def identify_person(faces, person, cam_num = 1, scale_factor = 1):
     video_capture = cv2.VideoCapture(cam_num)
@@ -29,21 +30,18 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
 
     while True:
         ret, frame = video_capture.read()
-        rgb_small_frame = frame #scale_frame(frame, scale_factor)
         if not ret:
             break
 
+        rgb_small_frame = scale_frame(frame, scale_factor)
         timer = cv2.getTickCount()
 
         if process_this_frame:
             face_locations = face_recognition.face_locations(rgb_small_frame, model="cnn")
             face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-            print(face_locations)
-
             face_names = []
             for face_encoding in face_encodings:
-                matches = face_recognition.compare_faces(known_face_encodings, face_encoding, 0.5)
+                matches = face_recognition.compare_faces(known_face_encodings, face_encoding, 0.6)
                 name = "Unknown"
                 if True in matches:
                     first_match_index = matches.index(True)
@@ -68,7 +66,7 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
 
         cv2.putText(frame, "FPS: " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-        cv2.imshow('Video', frame)
+        cv2.imshow("Video", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -78,19 +76,19 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
 
 def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
     tracker = None;
-    if tracker_type == 'BOOSTING':
+    if tracker_type == "BOOSTING":
         tracker = cv2.TrackerBoosting_create()
-    if tracker_type == 'MIL':
+    if tracker_type == "MIL":
         tracker = cv2.TrackerMIL_create()
-    if tracker_type == 'KCF':
+    if tracker_type == "KCF":
         tracker = cv2.TrackerKCF_create()
-    if tracker_type == 'TLD':
+    if tracker_type == "TLD":
         tracker = cv2.TrackerTLD_create()
-    if tracker_type == 'MEDIANFLOW':
+    if tracker_type == "MEDIANFLOW":
         tracker = cv2.TrackerMedianFlow_create()
-    if tracker_type == 'GOTURN':
+    if tracker_type == "GOTURN":
         tracker = cv2.TrackerGOTURN_create()
-    if tracker_type == 'MOSSE':
+    if tracker_type == "MOSSE":
         tracker = cv2.TrackerMOSSE_create()
 
     ret = tracker.init(frame, bbox)
@@ -100,7 +98,7 @@ def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
 
     return tracker
 
-def track_object(tracker_type = 'BOOSTING', cam_num = 1):
+def track_object(tracker_type = "BOOSTING", cam_num = 1):
 
     video_capture = cv2.VideoCapture(cam_num)
 
