@@ -7,7 +7,7 @@ def scale_frame(frame, scale = 1):
     return cv2.resize(frame, (0,0), fx=scale, fy=scale)
     # return small_frame[:, :, ::-1]
 
-def identify_person(faces, person, cam_num = 1, scale_factor = 1):
+def identify_person(faces, cam_num = 1, scale_factor = 1):
     video_capture = cv2.VideoCapture(cam_num)
 
     if not video_capture.isOpened():
@@ -19,9 +19,14 @@ def identify_person(faces, person, cam_num = 1, scale_factor = 1):
 
     for person in faces:
         image = face_recognition.load_image_file(faces[person])
-        face_encoding = face_recognition.face_encodings(image)[0]
-        known_face_encodings.append(face_encoding)
-        known_face_names.append(person)
+        print(person)
+        face_encoding_list = face_recognition.face_encodings(image)
+        if (len(face_encoding_list) > 0):
+            face_encoding = face_encoding_list[0]
+            known_face_encodings.append(face_encoding)
+            known_face_names.append(person)
+        else:
+            print("\tCould not find face for person...")
 
     face_locations = []
     face_encodings = []
@@ -114,7 +119,6 @@ def camera_prep(video_capture):
     cv2.destroyAllWindows()
     return ret, frame
 
-
 def select_ROI(frame):
     bbox = cv2.selectROI(frame, False)
     cv2.destroyAllWindows()
@@ -179,10 +183,23 @@ def track_object_all_types(cam_num = 1, \
     video_capture.release()
     cv2.destroyAllWindows()
 
+def id_and_track_face(faces, person, trackers_types = ["CSRT"], cam_num = 1, scale_factor = 1):
+    video_capture = cv2.VideoCapture(cam_num)
 
+    if not video_capture.isOpened():
+        print("Could not open video")
+        return
 
-def track_and_id_face(faces, person, tracker_type = "BOOSTING", cam_num = 1, scale_factor = 1):
-    print("NOT YET DEVELOPED")
+    known_face_encodings = []
+    known_face_names = []
+
+    for person in faces:
+        image = face_recognition.load_image_file(faces[person])
+        print(person)
+        face_encoding_list = face_recognition.face_encodings(image)
+        if (len(face_encoding_list) > 0):
+            print("TODO")
+
 
 
 

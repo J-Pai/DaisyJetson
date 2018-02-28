@@ -3,11 +3,13 @@
 import face_recognition
 import cv2
 import daisy_test
+import daisy_eye
+import daisy_spine
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
-    "JessePai": "./faces/JPai-2.jpg",
-    "JessePai": "./faces/JPai-3.jpg"
+    "VladMok": "./faces/VMok-1.jpg",
+    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
 tracker_types = ["BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT"]
@@ -19,6 +21,6 @@ if __name__ == "__main__":
     the camera. Please make sure the scale factor is greater than 0 and less than
     or equal to 1.
     """
-    #daisy_test.identify_person(faces, "JessePai", scale_factor = 1)
-    daisy_test.track_object_all_types(types = ["CSRT"])
-    #daisy_test.track_and_id_face(faces, "JessePai")
+    daisy_test.identify_person(faces, scale_factor = 1)
+    #daisy_test.track_object_all_types(types = ["CSRT"])
+    #bbox = daisy_test.id_and_track_face(faces, "JessePai")
