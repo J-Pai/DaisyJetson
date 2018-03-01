@@ -8,8 +8,8 @@ import daisy_spine
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
-    "VladMok": "./faces/VMok-1.jpg",
-    "TeddyMen": "./faces/TMen-1.jpg"
+#    "VladMok": "./faces/VMok-1.jpg",
+#    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
 tracker_types = ["BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT"]
