@@ -10,4 +10,6 @@ This repository contains the code ncessary for Daisy to track objects and indivi
 
 [GOTURN Pretrained Model](https://github.com/opencv/opencv_extra/tree/c4219d5eb3105ed8e634278fad312a1a8d2c182d/testdata/tracking)
 
+[Trackers in OpenCV-contrib 3.4.1](https://docs.opencv.org/trunk/d0/d0a/classcv_1_1Tracker.html)
+
 Directions: Download all files. Combine zip parts into 1 zip file. Unzip model file. Place files in the directory that contains holds this repository.
