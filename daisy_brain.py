@@ -31,5 +31,5 @@ if __name__ == "__main__":
 
     eye = DaisyEye(faces)
     eye.find_and_track("JessePai", dbg = False)
-    print(cv2.getBuildInformation())
+    # print(cv2.getBuildInformation())
 
