@@ -1,5 +1,6 @@
 import cv2
 import face_recognition
+import time
 
 def scale_frame(frame, scale = 1):
     if (scale == 1):
@@ -7,7 +8,57 @@ def scale_frame(frame, scale = 1):
     return cv2.resize(frame, (0,0), fx=scale, fy=scale)
     # return small_frame[:, :, ::-1]
 
-def identify_person(faces, cam_num = 1, scale_factor = 1):
+def identify_faces(cam_num = 1, scale_factor = 1, width = 1024, height = 576):
+    video_capture = cv2.VideoCapture(cam_num)
+
+    if not video_capture.isOpened():
+        print("Could not open video")
+        return
+
+    face_locations = []
+    process_this_frame = True
+
+    time.sleep(5)
+
+    video_capture.set(3, width)
+    video_capture.set(4, height)
+
+    while True:
+        ret, frame = video_capture.read()
+        if not ret:
+            break
+
+        rgb_small_frame = scale_frame(frame, scale_factor)
+        timer = cv2.getTickCount()
+
+        if process_this_frame:
+            face_locations = face_recognition.face_locations(rgb_small_frame, model="cnn")
+            fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
+        process_this_frame = not process_this_frame
+
+        # Display the results
+        for (top, right, bottom, left) in face_locations:
+            top *= int(1/scale_factor)
+            right *= int(1/scale_factor)
+            bottom *= int(1/scale_factor)
+            left *= int(1/scale_factor)
+
+            print((top, right, bottom, left))
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 1)
+
+
+        cv2.putText(frame, "FPS: " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+        cv2.imshow("Video", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
+
+
+def identify_person(faces, cam_num = 1, scale_factor = 1, width = 1024, height = 576):
     video_capture = cv2.VideoCapture(cam_num)
 
     if not video_capture.isOpened():
@@ -33,6 +84,9 @@ def identify_person(faces, cam_num = 1, scale_factor = 1):
     face_names = []
     process_this_frame = True
 
+    video_capture.set(3, width)
+    video_capture.set(4, height)
+
     while True:
         ret, frame = video_capture.read()
         if not ret:
@@ -53,7 +107,7 @@ def identify_person(faces, cam_num = 1, scale_factor = 1):
                     name = known_face_names[first_match_index]
                 face_names.append(name)
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
-        process_this_frame = not process_this_frame
+        # process_this_frame = not process_this_frame
 
         # Display the results
         for (top, right, bottom, left), name in zip(face_locations, face_names):
@@ -65,7 +119,6 @@ def identify_person(faces, cam_num = 1, scale_factor = 1):
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 1)
 
             cv2.rectangle(frame, (left, bottom + 20), (right, bottom), (0, 0, 255), cv2.FILLED)
-            font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frame, name, (left + 3, bottom + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
 
@@ -182,24 +235,3 @@ def track_object_all_types(cam_num = 1, \
 
     video_capture.release()
     cv2.destroyAllWindows()
-
-def id_and_track_face(faces, person, trackers_types = ["CSRT"], cam_num = 1, scale_factor = 1):
-    video_capture = cv2.VideoCapture(cam_num)
-
-    if not video_capture.isOpened():
-        print("Could not open video")
-        return
-
-    known_face_encodings = []
-    known_face_names = []
-
-    for person in faces:
-        image = face_recognition.load_image_file(faces[person])
-        print(person)
-        face_encoding_list = face_recognition.face_encodings(image)
-        if (len(face_encoding_list) > 0):
-            print("TODO")
-
-
-
-
