@@ -2,6 +2,9 @@ import cv2
 import face_recognition
 import sys
 
+STD_WIDTH = 1920
+STD_HEIGHT = 1080
+
 class DaisyEye:
     cam = None
     scale_factor = 0
@@ -9,7 +12,7 @@ class DaisyEye:
     frame = None
     output_frame = None
 
-    def __init__(self, faces, cam_num = 1, scale_factor = 1, res_width = 1024, res_height = 576):
+    def __init__(self, faces, cam_num = 1, scale_factor = 1, res_width = STD_WIDTH, res_height = STD_HEIGHT):
         cv2.setNumThreads(100)
 
         self.cam = cv2.VideoCapture(cam_num);
@@ -32,16 +35,19 @@ class DaisyEye:
         self.cam.set(3, res_width)
         self.cam.set(4, res_height)
 
-    def draw_bbox(self, valid, frame, bbox, color, text):
+    def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
             return
         cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 1, 1)
         cv2.putText(frame, text, (int(bbox[0]), int(bbox[1]) - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
-    def scale_frame(self, frame):
+    def __scale_frame(self, frame):
         if self.scale_factor == 1:
             return frame
         return cv2.resize(frame, (0,0), fx=self.scale_factor, fy=self.scale_factor)
+
+    def view(self, render = []):
+        print("Openning up ViewPort")
 
     def locate_target(self, name, ret = False, video_out = True, debug = True):
         print("Start Locating Target: " + name, ret, video_out, debug)
@@ -57,7 +63,7 @@ class DaisyEye:
                 return -1
             if video_out:
                 self.output_frame = self.frame[:,:,:].copy()
-            rgb_small_frame = self.scale_frame(self.frame)
+            rgb_small_frame = self.__scale_frame(self.frame)
             timer = cv2.getTickCount()
 
             face_locations = face_recognition.face_locations(rgb_small_frame, model="cnn")
@@ -81,7 +87,7 @@ class DaisyEye:
                     bbox = (left, top, right, bottom)
 
                     if video_out:
-                        self.draw_bbox(valid, self.output_frame, bbox, (0, 0, 255), name)
+                        self.__draw_bbox(valid, self.output_frame, bbox, (0, 0, 255), name)
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
@@ -104,7 +110,7 @@ class DaisyEye:
 
         cv2.destroyAllWindows()
 
-    def init_tracker(self, frame, bbox, tracker_type = "BOOSTING"):
+    def __init_tracker(self, frame, bbox, tracker_type = "BOOSTING"):
         tracker = None;
         if tracker_type == "BOOSTING":
             tracker = cv2.TrackerBoosting_create()
@@ -129,7 +135,7 @@ class DaisyEye:
             return None
         return tracker
 
-    def select_ROI(self, frame):
+    def __select_ROI(self, frame):
         bbox = cv2.selectROI(frame, False)
         cv2.destroyAllWindows()
         return bbox;
@@ -146,13 +152,13 @@ class DaisyEye:
             if not valid:
                 print("Failure to read camera")
                 return -1
-            bbox = self.select_ROI(self.frame)
+            bbox = self.__select_ROI(self.frame)
         else:
             bbox = (obj[0], obj[1], obj[2] - obj[0], obj[3] - obj[1])
 
 
 
-        trackerObj = self.init_tracker(self.frame, bbox, tracker)
+        trackerObj = self.__init_tracker(self.frame, bbox, tracker)
 
         bbox = None
 
@@ -179,7 +185,7 @@ class DaisyEye:
 
             bbox = (left, top, right, bot)
             if video_out:
-                self.draw_bbox(tracker_ret_and_bbox[0], \
+                self.__draw_bbox(tracker_ret_and_bbox[0], \
                     self.output_frame, \
                     bbox, \
                     color,
