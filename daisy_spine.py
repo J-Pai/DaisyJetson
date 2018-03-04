@@ -3,7 +3,7 @@ from sys import argv
 
 class DaisySpine:
     ser = None
-    def __init__(self, com_port = "/dev/ttyACM1", baud_rate = 28800, time_out = 1):
+    def __init__(self, com_port = "/dev/ttyACM0", baud_rate = 28800, time_out = 1):
         self.ser = serial.Serial(com_port, baud_rate, timeout = time_out)
 
     def read_line(self):
