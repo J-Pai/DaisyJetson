@@ -2,19 +2,16 @@ import cv2
 import face_recognition
 import sys
 
-STD_WIDTH = 1920
-STD_HEIGHT = 1080
+STD_WIDTH = 640
+STD_HEIGHT = 480
 
 class DaisyEye:
     cam = None
     scale_factor = 0
     known_faces = {}
-    frame = None
     output_frame = None
 
     def __init__(self, faces, cam_num = 1, scale_factor = 1, res_width = STD_WIDTH, res_height = STD_HEIGHT):
-        cv2.setNumThreads(100)
-
         self.cam = cv2.VideoCapture(cam_num);
 
         if not self.cam.isOpened():
@@ -38,32 +35,32 @@ class DaisyEye:
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
             return
-        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 1, 1)
-        cv2.putText(frame, text, (int(bbox[0]), int(bbox[1]) - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 1, 1)
+        cv2.putText(frame, text, (bbox[0], bbox[1] - 3), \
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
     def __scale_frame(self, frame):
         if self.scale_factor == 1:
             return frame
         return cv2.resize(frame, (0,0), fx=self.scale_factor, fy=self.scale_factor)
 
-    def view(self, render = []):
-        print("Openning up ViewPort")
-
     def locate_target(self, name, ret = False, video_out = True, debug = True):
         print("Start Locating Target: " + name, ret, video_out, debug)
         face_locations = []
         face_encodings = []
 
+        frame = None
+
         bbox = None
 
         while True:
-            valid, self.frame = self.cam.read()
+            valid, frame = self.cam.read()
             if not valid:
                 print("Failure to read camera")
-                return -1
+                return (-1,-1)
             if video_out:
-                self.output_frame = self.frame[:,:,:].copy()
-            rgb_small_frame = self.__scale_frame(self.frame)
+                self.output_frame = frame[:,:,:].copy()
+            rgb_small_frame = self.__scale_frame(frame)
             timer = cv2.getTickCount()
 
             face_locations = face_recognition.face_locations(rgb_small_frame, model="cnn")
@@ -101,17 +98,20 @@ class DaisyEye:
             if ret and person_found:
                 cv2.destroyAllWindows()
                 print("Done Locating Target")
-                return bbox
+                return (bbox, frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 print("Interrupted")
-                return 0
+                return (0, frame)
 
         cv2.destroyAllWindows()
 
     def __init_tracker(self, frame, bbox, tracker_type = "BOOSTING"):
         tracker = None;
+
+        print("Init Tracker with: ", bbox, tracker_type)
+
         if tracker_type == "BOOSTING":
             tracker = cv2.TrackerBoosting_create()
         if tracker_type == "MIL":
@@ -135,63 +135,74 @@ class DaisyEye:
             return None
         return tracker
 
+    def view(self):
+        ret, frame = self.cam.read()
+        if not ret:
+            print("Cannot read video file")
+            sys.exit()
+        print("Press q when image is ready")
+        while True:
+            ret, frame = self.cam.read()
+            cv2.imshow("Image Prep", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        cv2.destroyAllWindows()
+        return ret, frame
+
     def __select_ROI(self, frame):
         bbox = cv2.selectROI(frame, False)
         cv2.destroyAllWindows()
         return bbox;
 
 
-    def track_object(self, obj = None, tracker = "CSRT", color = (0,255,0), video_out = True, debug = True):
+    def track_object(self, obj = None, f = None, tracker = "CSRT", color = (0,255,0), video_out = True, debug = True):
         print("Start Tracking Obj", video_out, debug)
 
+        frame = f
         bbox = obj
-        if bbox is None:
-            valid, self.frame = self.cam.read()
+
+        if bbox is None or frame is None:
+            valid, frame = self.view()
             if video_out:
-                self.output_frame = self.frame[:,:,:].copy()
+                self.output_frame = frame[:,:,:].copy()
             if not valid:
                 print("Failure to read camera")
                 return -1
-            bbox = self.__select_ROI(self.frame)
+            bbox = self.__select_ROI(frame)
         else:
             bbox = (obj[0], obj[1], obj[2] - obj[0], obj[3] - obj[1])
+            frame = f[:,:,:]
 
-
-
-        trackerObj = self.__init_tracker(self.frame, bbox, tracker)
+        trackerObj = self.__init_tracker(frame, bbox, tracker)
 
         bbox = None
 
         while True:
-            valid, self.frame = self.cam.read()
+            valid, frame = self.cam.read()
             if video_out:
-                self.output_frame = self.frame[:,:,:].copy()
+                self.output_frame = frame[:,:,:].copy()
             if not valid:
                 print("Failure to read camera")
                 return -1
 
             timer = cv2.getTickCount()
 
-            tracker_ret_and_bbox = trackerObj.update(self.frame)
+            tracker_ret_and_bbox = trackerObj.update(frame)
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
             trackerBBox = tracker_ret_and_bbox[1]
 
-            left = trackerBBox[0]
-            top = trackerBBox[1]
-            right = trackerBBox[0] + trackerBBox[2]
-            bot = trackerBBox[1] + trackerBBox[3]
+            bbox = (int(trackerBBox[0]), int(trackerBBox[1]), \
+                    int(trackerBBox[0] + trackerBBox[2]), \
+                    int(trackerBBox[1] + trackerBBox[3]))
 
-            bbox = (left, top, right, bot)
             if video_out:
                 self.__draw_bbox(tracker_ret_and_bbox[0], \
                     self.output_frame, \
                     bbox, \
                     color,
                     tracker)
-
-            if video_out:
                 cv2.putText(self.output_frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
                 failedTrackers = "FAILED: "
                 if not tracker_ret_and_bbox[0]:
@@ -216,11 +227,11 @@ class DaisyEye:
 
     def find_and_track(self, name, video = True, dbg = True):
         print("Finding and Tracking...")
-        init_bbox = self.locate_target("JessePai", ret = True, video_out = video, debug = dbg)
+        init_bbox, frame = self.locate_target("JessePai", ret = True, video_out = video, debug = dbg)
         if type(init_bbox) is not tuple:
             sys.exit()
         print(init_bbox)
-        self.track_object(init_bbox, video_out = video, debug = dbg)
+        self.track_object(init_bbox, frame, video_out = video, debug = dbg)
         cv2.destroyAllWindows()
         self.cam.release()
         print("Done!")
@@ -231,8 +242,8 @@ faces = {
 
 if __name__ == "__main__":
     eye = DaisyEye(faces)
-    init_bbox = eye.locate_target("JessePai", ret = True, debug = False)
+    init_bbox, frame = eye.locate_target("JessePai", ret = True, debug = False)
     if type(init_bbox) is not tuple:
         sys.exit()
     print(init_bbox)
-    eye.track_object(init_bbox, debug = False)
+    eye.track_object(init_bbox, frame, debug = False)

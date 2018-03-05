@@ -8,7 +8,7 @@ from daisy_spine import DaisySpine
 from daisy_eye import DaisyEye
 
 faces = {
-    "JessePai": "./faces/JPai-2.png",
+    "JessePai": "./faces/JPai-1.jpg",
 #    "VladMok": "./faces/VMok-1.jpg",
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
@@ -30,5 +30,6 @@ if __name__ == "__main__":
 
 
     eye = DaisyEye(faces)
-    # eye.find_and_track("JessePai", dbg = False)
-    eye.view("JessePai")
+    eye.find_and_track("JessePai", dbg = False)
+    # eye.track_object(video_out = True)
+    # eye.view("JessePai")
