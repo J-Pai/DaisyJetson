@@ -1,4 +1,5 @@
 import cv2
+import dlib
 import face_recognition
 import time
 
@@ -150,6 +151,11 @@ def init_tracker(frame, bbox, tracker_type = "BOOSTING"):
         tracker = cv2.TrackerMOSSE_create()
     if tracker_type == "CSRT":
         tracker = cv2.TrackerCSRT_create()
+    if tracker_type == "DLIB":
+        tracker = dlib.correlation_tracker()
+        tracker.start_track(frame, \
+            dlib.rectangle(bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]))
+        return tracker
 
     ret = tracker.init(frame, bbox)
 
@@ -186,8 +192,9 @@ def draw_bbox(valid, frame, bbox, color, text):
     cv2.putText(frame, text, (int(bbox[0]) + 3, int(bbox[1] + bbox[3]) + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
 def track_object_all_types(cam_num = 1, \
-        types = ["BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT"], \
-        colors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255), (255, 255, 255)]):
+        types = ["BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT", "DLIB"], \
+        colors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), \
+            (0, 255, 255), (255, 0, 255), (255, 255, 255), (50, 0, 0)]):
     video_capture = cv2.VideoCapture(cam_num)
 
     ret, frame = camera_prep(video_capture)
@@ -208,7 +215,14 @@ def track_object_all_types(cam_num = 1, \
 
         tracker_ret_and_bbox = {}
         for tracker in types:
-            tracker_ret_and_bbox[tracker] = trackers[tracker].update(frame)
+            if tracker != "DLIB":
+                tracker_ret_and_bbox[tracker] = trackers[tracker].update(frame)
+            elif tracker == "DLIB":
+                trackers[tracker].update(frame)
+                rect = trackers[tracker].get_position()
+
+                tracker_ret_and_bbox[tracker] = (True,
+                        (rect.left(), rect.top(), rect.width(), rect.height()))
 
         fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 

@@ -13,9 +13,6 @@ faces = {
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
-tracker_types = ["BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT"]
-tracker_colors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255), (255, 255, 255)]
-
 if __name__ == "__main__":
     #spine = DaisySpine()
     """
@@ -26,10 +23,13 @@ if __name__ == "__main__":
     #daisy_test.identify_faces(scale_factor = 1)
     #daisy_test.identify_person(faces, scale_factor = 1)
     #daisy_test.track_object_all_types(types = ["CSRT"])
+    #daisy_test.track_object_all_types(types = ["DLIB"])
     #bbox = daisy_test.id_and_track_face(faces, "JessePai")
 
 
     eye = DaisyEye(faces)
-    eye.find_and_track("JessePai", dbg = False)
-    # eye.track_object(video_out = True)
-    # eye.view("JessePai")
+    #eye.locate_target("JessePai", debug = True, ret = False)
+    #eye.find_and_track("JessePai", debug = False)
+    #eye.track_object(video_out = True)
+    eye.find_and_track_correcting("JessePai")
+    #eye.view()
