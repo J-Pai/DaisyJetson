@@ -15,12 +15,14 @@ TRACK_H = 480
 DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 75, int(TRACK_H/2) - 100,
         int(TRACK_W/2) + 75, int(TRACK_H/2) + 100)
 
+CORRECTION_THRESHOLD = 0.70
+
 class DaisyEye:
     cam = None
     scale_factor = 0
     known_faces = {}
 
-    def __init__(self, faces, cam_num = 1, scale_factor = 1):
+    def __init__(self, faces, cam_num = 1, scale_factor = 1, res = (FACE_W, FACE_H)):
         self.cam = cv2.VideoCapture(cam_num);
 
         if not self.cam.isOpened():
@@ -37,6 +39,10 @@ class DaisyEye:
                 print("\tCould not find face for person...")
 
         self.scale_factor = scale_factor
+
+        self.cam.set(3, res[0])
+        self.cam.set(4, res[1])
+        self.cam.set(14, EXPOSURE_2)
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
@@ -140,7 +146,7 @@ class DaisyEye:
     def __init_tracker(self, frame, bbox, tracker_type = "BOOSTING"):
         tracker = None;
 
-        print("Init Tracker with: ", bbox, tracker_type)
+        print("Init Tracker with:", bbox, tracker_type)
 
         if tracker_type == "BOOSTING":
             tracker = cv2.TrackerBoosting_create()
@@ -170,7 +176,7 @@ class DaisyEye:
             return None
         return tracker
 
-    def view(self, face_bbox = DEFAULT_FACE_TARGET_BOX):
+    def view(self, face_bbox = DEFAULT_FACE_TARGET_BOX, bbox_list = []):
         ret, frame = self.cam.read()
         if not ret:
             print("Cannot read video file")
@@ -180,8 +186,12 @@ class DaisyEye:
             ret, frame = self.cam.read()
             output_frame = frame.copy()
 
-            if bbox is not None:
-                self.__draw_bbox(ret, output_frame, face_bbox, (255,0,0), "Target")
+            self.__draw_bbox(ret, output_frame, face_bbox, (255,0,0), "Target")
+            count = 0
+            for bbox in bbox_list:
+                self.__draw_bbox(ret, output_frame, bbox, (255, 0, 0), str(count))
+                print(count, self.__bbox_overlap(face_bbox, bbox), self.__bbox_overlap(bbox, face_bbox))
+                count += 1
             cv2.imshow("Eye View", output_frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -200,9 +210,7 @@ class DaisyEye:
             video_out = True, debug = True):
         print("Start Tracking Obj", video_out, debug)
 
-        self.cam.set(3, res[0])
-        self.cam.set(4, res[1])
-        self.cam.set(14, EXPOSURE_2)
+
 
         frame = f
         output_frame = None
@@ -317,6 +325,29 @@ class DaisyEye:
         self.cam.release()
         print("Done!")
 
+    """
+    Standard bbox layout (left, top, right, bottom)
+    bbox1 overlaps with bbox2?
+    """
+    def __bbox_overlap(self, bbox1, bbox2):
+        if not bbox1 or not bbox2:
+            return 0
+
+        left = max(bbox1[0], bbox2[0])
+        top = max(bbox1[1], bbox2[1])
+        right = min(bbox1[2], bbox2[2])
+        bottom = min(bbox1[3], bbox2[3])
+
+        if left < right and top < bottom:
+            return self.__bbox_area((left, top, right, bottom))
+        return 0
+
+    def __bbox_area(self, bbox):
+        if not bbox:
+            return 0
+        (left, top, right, bottom) = bbox
+        return (right - left) * (bottom - top)
+
     def find_and_track_correcting(self, name, tracker = "CSRT", \
             face_target_box = DEFAULT_FACE_TARGET_BOX, \
             res = (FACE_W, FACE_H), \
@@ -329,11 +360,14 @@ class DaisyEye:
         self.cam.set(4, res[1])
         self.cam.set(14, EXPOSURE_1)
 
+        face_count = 5
+        face_process_frame = True
+
+        bbox = None
+        face_bbox = None
+
         while True:
             output_frame = None
-
-            bbox = None
-            face_bbox = None
 
             valid, frame = self.cam.read()
 
@@ -343,44 +377,53 @@ class DaisyEye:
 
             timer = cv2.getTickCount()
 
-            small_frame = self.__crop_frame(frame, face_target_box)
-
-            face_locations = face_recognition.face_locations(small_frame, model="cnn")
-            face_encodings = face_recognition.face_encodings(small_frame, face_locations)
-
             person_found = False
 
-            for face_encoding in face_encodings:
-                matches = face_recognition.compare_faces([self.known_faces[name]], face_encoding, 0.6)
+            if face_process_frame:
+                small_frame = self.__crop_frame(frame, face_target_box)
 
-                if len(matches) > 0 and matches[0]:
-                    person_found = True
+                face_locations = face_recognition.face_locations(small_frame, model="cnn")
+                face_encodings = face_recognition.face_encodings(small_frame, face_locations)
 
-                    (top, right, bottom, left) = face_locations[0]
 
-                    left += face_target_box[0]
-                    top += face_target_box[1]
-                    right += face_target_box[0]
-                    bottom += face_target_box[1]
+                for face_encoding in face_encodings:
+                    matches = face_recognition.compare_faces([self.known_faces[name]], face_encoding, 0.6)
 
-                    left *= int(1/self.scale_factor)
-                    top *= int(1/self.scale_factor)
-                    right *= int(1/self.scale_factor)
-                    bottom *= int(1/self.scale_factor)
+                    if len(matches) > 0 and matches[0]:
+                        person_found = True
 
-                    face_bbox = (left, top, right, bottom)
+                        face_count += 1
 
+                        (top, right, bottom, left) = face_locations[0]
+
+                        left += face_target_box[0]
+                        top += face_target_box[1]
+                        right += face_target_box[0]
+                        bottom += face_target_box[1]
+
+                        left *= int(1/self.scale_factor)
+                        top *= int(1/self.scale_factor)
+                        right *= int(1/self.scale_factor)
+                        bottom *= int(1/self.scale_factor)
+
+                        face_bbox = (left, top, right, bottom)
+
+            face_process_frame = not face_process_frame
             status = False
-            bbox = None
 
             if video_out:
                 output_frame = frame.copy()
 
-            if person_found:
+            overlap_pct = 0
+            if bbox and face_bbox:
+                overlap_pct = self.__bbox_overlap(face_bbox, bbox) / \
+                        self.__bbox_area(face_bbox)
+            if person_found and overlap_pct < CORRECTION_THRESHOLD:
                 # Re-init tracker
                 bbox = (face_bbox[0], face_bbox[1], \
                         face_bbox[2] - face_bbox[0], face_bbox[3] - face_bbox[1])
                 trackerObj = self.__init_tracker(frame, bbox, tracker)
+                face_count = 0
 
             if trackerObj is not None:
                 trackerBBox = None
@@ -410,6 +453,7 @@ class DaisyEye:
                 self.__draw_bbox(status, output_frame, bbox, (0, 255, 0), tracker)
 
                 self.__draw_bbox(person_found, output_frame, face_bbox, (0, 0, 255), name)
+
                 cv2.putText(output_frame, "FPS : " + str(int(fps)), (100,50), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
 

@@ -31,5 +31,6 @@ if __name__ == "__main__":
     #eye.locate_target("JessePai", debug = True, ret = False)
     #eye.find_and_track("JessePai", debug = False)
     #eye.track_object(video_out = True)
-    eye.find_and_track_correcting("JessePai")
-    #eye.view()
+    eye.find_and_track_correcting("JessePai", tracker="CSRT", debug = False)
+    #eye.view(bbox_list=[(350,250,450,350),(500,250,600,350), \
+    #        (350,400,450,650),(500,400,600,650),(450,350,550,450)])
