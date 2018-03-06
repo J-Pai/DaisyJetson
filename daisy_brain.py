@@ -2,10 +2,10 @@
 
 import face_recognition
 import cv2
-import daisy_test
-import daisy_eye
 from daisy_spine import DaisySpine
 from daisy_eye import DaisyEye
+from multiprocessing import Process, Queue
+import time
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
@@ -13,24 +13,26 @@ faces = {
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
+name = "JessePai"
+
+data = None
+
+def begin_tracking(name, data_queue):
+    print("Begin Tracking")
+    eye = DaisyEye(faces, data_queue)
+    eye.find_and_track_correcting(name, debug=False)
+
+def daisy_action(data_queue):
+    print("Getting Data")
+    while True:
+        print(data_queue.get())
+        time.sleep(5)
+
 if __name__ == "__main__":
     #spine = DaisySpine()
-    """
-    Dropping the scale factor from 1 means that the face needs to be closer to
-    the camera. Please make sure the scale factor is greater than 0 and less than
-    or equal to 1.
-    """
-    #daisy_test.identify_faces(scale_factor = 1)
-    #daisy_test.identify_person(faces, scale_factor = 1)
-    #daisy_test.track_object_all_types(types = ["CSRT"])
-    #daisy_test.track_object_all_types(types = ["DLIB"])
-    #bbox = daisy_test.id_and_track_face(faces, "JessePai")
-
-
-    eye = DaisyEye(faces)
-    #eye.locate_target("JessePai", debug = True, ret = False)
-    #eye.find_and_track("JessePai", debug = False)
-    #eye.track_object(video_out = True)
-    eye.find_and_track_correcting("JessePai", tracker="CSRT", debug = False)
-    #eye.view(bbox_list=[(350,250,450,350),(500,250,600,350), \
-    #        (350,400,450,650),(500,400,600,650),(450,350,550,450)])
+    data = Queue()
+    #eye.find_and_track_correcting(name)
+    action_p = Process(target = daisy_action, args=(data, ))
+    action_p.daemon = True
+    action_p.start()
+    begin_tracking("JessePai", data)

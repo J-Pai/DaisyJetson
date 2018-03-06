@@ -249,3 +249,25 @@ def track_object_all_types(cam_num = 1, \
 
     video_capture.release()
     cv2.destroyAllWindows()
+
+
+"""
+OLD BRAIN MAIN
+Dropping the scale factor from 1 means that the face needs to be closer to
+the camera. Please make sure the scale factor is greater than 0 and less than
+or equal to 1.
+#daisy_test.identify_faces(scale_factor = 1)
+#daisy_test.identify_person(faces, scale_factor = 1)
+#daisy_test.track_object_all_types(types = ["CSRT"])
+#daisy_test.track_object_all_types(types = ["DLIB"])
+#bbox = daisy_test.id_and_track_face(faces, "JessePai")
+
+
+eye = DaisyEye(faces)
+#eye.locate_target("JessePai", debug = True, ret = False)
+#eye.find_and_track("JessePai", debug = False)
+#eye.track_object(video_out = True)
+eye.find_and_track_correcting("JessePai", tracker="CSRT", debug = False)
+#eye.view(bbox_list=[(350,250,450,350),(500,250,600,350), \
+#        (350,400,450,650),(500,400,600,650),(450,350,550,450)])
+"""

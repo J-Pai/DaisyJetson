@@ -2,6 +2,7 @@ import cv2
 import dlib
 import face_recognition
 import sys
+from multiprocessing import Queue
 
 EXPOSURE_1 = 0
 EXPOSURE_2 = 0
@@ -21,8 +22,10 @@ class DaisyEye:
     cam = None
     scale_factor = 0
     known_faces = {}
+    data_queue = None
 
-    def __init__(self, faces, cam_num = 1, scale_factor = 1, res = (FACE_W, FACE_H)):
+    def __init__(self, faces, data_queue = None, cam_num = 1, scale_factor = 1, \
+            res = (FACE_W, FACE_H)):
         self.cam = cv2.VideoCapture(cam_num);
 
         if not self.cam.isOpened():
@@ -43,6 +46,8 @@ class DaisyEye:
         self.cam.set(3, res[0])
         self.cam.set(4, res[1])
         self.cam.set(14, EXPOSURE_2)
+
+        self.data_queue = data_queue
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
@@ -442,6 +447,9 @@ class DaisyEye:
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
+            if not status:
+                self.__update_individual_position("NONE", bbox, res)
+
             if video_out:
                 cv2.line(output_frame, (0, int(res[1]/2)), \
                         (int(res[0]), int(res[1]/2)), (255,0,0), 1)
@@ -475,6 +483,9 @@ class DaisyEye:
 
         cv2.destroyAllWindows()
 
+    def __update_individual_position(self, str_pos, track_bbox, res):
+        if self.data_queue is not None:
+            self.data_queue.put((str_pos, track_bbox, res))
 
 faces = {
     "JessePai": "./faces/JPai-2.png",
