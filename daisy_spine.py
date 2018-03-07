@@ -8,11 +8,11 @@ class Dir(Enum):
 
 class DaisySpine:
     ser = None
-    def __init__(self, com_port = "/dev/ttyACM0", baud_rate = 28800, time_out = 1):
+    def __init__(self, com_port = "/dev/ttyACM0", baud_rate = 9600, time_out = 1):
         self.ser = serial.Serial(com_port, baud_rate, timeout = time_out)
 
     def read_line(self):
-        print(self.ser.readline())
+        return self.ser.readline()
 
     def read_all_lines_debug(self, chunk_size = 200):
         print("=== READING ALL LINES ===")
@@ -41,8 +41,6 @@ class DaisySpine:
             if not len(byte_chunk) == chunk_size:
                 break
 
-        self.ser.reset_input_buffer()
-
         return read_buffer;
 
     def pass_byte_basic(self, b):
@@ -51,9 +49,6 @@ class DaisySpine:
     def pass_byte_debug(self, b):
         print("+++ PASSING BYTE +++")
 
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
-
         if (int(b) > 255 or int(b) < 0):
             print("Byte out of range: " + b)
             print("+++ FAIL +++")
@@ -61,28 +56,20 @@ class DaisySpine:
 
         print("Passing byte " + str(b))
         self.pass_byte_basic(b)
-
-        ret = self.read_all_lines()
-
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
+        ret = self._read_line()
+        #ret = self.read_all_lines()
 
         print("+++ DONE +++")
         return ret
 
     def pass_byte(self, b):
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
-
         if (int(b) > 255 or int(b) < 0):
             print("Byte out of range: " + b)
             return
 
         self.pass_byte_basic(b)
-        ret = self.read_all_lines()
-
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
+        ret = self.read_line()
+        #ret = self.read_all_lines()
 
         return ret
 
