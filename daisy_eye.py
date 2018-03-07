@@ -11,14 +11,14 @@ FACE_H = 720
 DEFAULT_FACE_TARGET_BOX = (int(FACE_W/2) - 75, int(FACE_H/2) - 100,
         int(FACE_W/2) + 75, int(FACE_H/2) + 100)
 
-TRACK_W = 640
-TRACK_H = 480
-DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 75, int(TRACK_H/2) - 100,
-        int(TRACK_W/2) + 75, int(TRACK_H/2) + 100)
+TRACK_W = 1280
+TRACK_H = 720
+DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 340, int(TRACK_H/2) - 220,
+        int(TRACK_W/2) + 340, int(TRACK_H/2) + 220)
 
-FACE_COUNT = 5
+FACE_COUNT = 0
 
-CORRECTION_THRESHOLD = 0.70
+CORRECTION_THRESHOLD = 0.50
 
 class DaisyEye:
     cam = None
@@ -217,8 +217,6 @@ class DaisyEye:
             video_out = True, debug = True):
         print("Start Tracking Obj", video_out, debug)
 
-
-
         frame = f
         output_frame = None
 
@@ -356,6 +354,7 @@ class DaisyEye:
         return (right - left) * (bottom - top)
 
     def find_and_track_correcting(self, name, tracker = "CSRT", \
+            track_target_box = DEFAULT_TRACK_TARGET_BOX, \
             face_target_box = DEFAULT_FACE_TARGET_BOX, \
             res = (FACE_W, FACE_H), \
             video_out = True, debug = True):
@@ -372,6 +371,7 @@ class DaisyEye:
 
         bbox = None
         face_bbox = None
+        track_bbox = None
 
         while True:
             output_frame = None
@@ -386,9 +386,9 @@ class DaisyEye:
 
             person_found = False
 
-            if face_process_frame:
-                small_frame = self.__crop_frame(frame, face_target_box)
+            small_frame = self.__crop_frame(frame, face_target_box)
 
+            if face_process_frame:
                 face_locations = face_recognition.face_locations(
                         small_frame, model="cnn")
                 face_encodings = face_recognition.face_encodings(
@@ -425,16 +425,21 @@ class DaisyEye:
                 output_frame = frame.copy()
 
             overlap_pct = 0
-            if bbox and face_bbox:
-                overlap_area = self.__bbox_overlap(face_bbox, bbox)
+            track_area = self.__bbox_area(track_bbox)
+            if track_area > 0 and face_bbox:
+                overlap_area = self.__bbox_overlap(face_bbox, track_bbox)
                 overlap_pct = min(overlap_area / self.__bbox_area(face_bbox), \
-                        overlap_area / self.__bbox_area(bbox))
+                        overlap_area / self.__bbox_area(track_bbox))
+
+            small_frame = self.__crop_frame(frame, track_target_box)
 
             if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
                 # Re-init tracker
-                bbox = (face_bbox[0], face_bbox[1], \
-                        face_bbox[2] - face_bbox[0], face_bbox[3] - face_bbox[1])
-                trackerObj = self.__init_tracker(frame, bbox, tracker)
+                bbox = (face_bbox[0] - track_target_box[0], \
+                        face_bbox[1] - track_target_box[1], \
+                        face_bbox[2] - face_bbox[0], \
+                        face_bbox[3] - face_bbox[1])
+                trackerObj = self.__init_tracker(small_frame, bbox, tracker)
                 face_count = 0
 
             if trackerObj is not None:
@@ -442,15 +447,21 @@ class DaisyEye:
                 status = False
 
                 if tracker == "DLIB":
-                    status = trackerObj.update(frame)
+                    status = trackerObj.update(small_frame)
                     rect = trackerObj.get_position()
                     bbox = (int(rect.left()), int(rect.top()), \
                             int(rect.right()), int(rect.bottom()))
                 else:
-                    status, trackerBBox = trackerObj.update(frame)
-                    bbox = (int(trackerBBox[0]), int(trackerBBox[1]), \
+                    status, trackerBBox = trackerObj.update(small_frame)
+                    bbox = (int(trackerBBox[0]), \
+                            int(trackerBBox[1]), \
                             int(trackerBBox[0] + trackerBBox[2]), \
                             int(trackerBBox[1] + trackerBBox[3]))
+            if bbox is not None:
+                track_bbox = (bbox[0] + track_target_box[0], \
+                        bbox[1] + track_target_box[1], \
+                        bbox[2] + track_target_box[0], \
+                        bbox[3] + track_target_box[1])
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
@@ -463,9 +474,11 @@ class DaisyEye:
                 cv2.line(output_frame, (int(res[0]/2), 0),
                         (int(res[0]/2), int(res[1])), (255,0,0), 1)
 
-                self.__draw_bbox(valid, output_frame, face_target_box, (255, 0, 0), "TARGET")
+                self.__draw_bbox(valid, output_frame, track_target_box, (255, 0, 0), "TRACK_TARGET")
 
-                self.__draw_bbox(status, output_frame, bbox, (0, 255, 0), tracker)
+                self.__draw_bbox(valid, output_frame, face_target_box, (255, 0, 0), "FACE_TARGET")
+
+                self.__draw_bbox(status, output_frame, track_bbox, (0, 255, 0), tracker)
 
                 self.__draw_bbox(person_found, output_frame, face_bbox, (0, 0, 255), name)
 
@@ -488,22 +501,10 @@ class DaisyEye:
                     return 0
 
             if debug:
-                print(fps, bbox, face_bbox)
+                print(fps, track_bbox, face_bbox)
 
         cv2.destroyAllWindows()
 
     def __update_individual_position(self, str_pos, track_bbox, res):
         if self.data_queue is not None:
             self.data_queue.put((str_pos, track_bbox, res))
-
-faces = {
-    "JessePai": "./faces/JPai-2.png",
-}
-
-if __name__ == "__main__":
-    eye = DaisyEye(faces)
-    init_bbox, frame = eye.locate_target("JessePai", ret = True, debug = False)
-    if type(init_bbox) is not tuple:
-        sys.exit()
-    print(init_bbox)
-    eye.track_object(init_bbox, frame, debug = False)

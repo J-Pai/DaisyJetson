@@ -21,7 +21,7 @@ eye = None
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
     eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_correcting(name, tracker="CSRT", debug=False)
+    eye.find_and_track_correcting(name, tracker="MEDIANFLOW", debug=False)
     data_queue.close()
 
 def daisy_action(data_queue):

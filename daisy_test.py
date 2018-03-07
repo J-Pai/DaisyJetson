@@ -2,6 +2,8 @@ import cv2
 import dlib
 import face_recognition
 import time
+import numpy as np
+from matplotlib import pyplot as plt
 
 def scale_frame(frame, scale = 1):
     if (scale == 1):
@@ -244,12 +246,83 @@ def track_object_all_types(cam_num = 1, \
 
         cv2.imshow("Tracking", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitkey(1) & 0xff == ord('q'):
             break
 
     video_capture.release()
     cv2.destroyAllWindows()
 
+"""
+TEST ORB SIFT(TOO SLOW) and SURF(9-10?)
+"""
+
+def different_tracker(cam_num = 1):
+    cam = cv2.VideoCapture(cam_num)
+
+    ret, init_frame = camera_prep(cam)
+
+    bbox = select_ROI(init_frame)
+
+    orb = cv2.ORB_create()
+
+    init_frame = init_frame[bbox[1]:bbox[3],bbox[0]:bbox[2],:].copy()
+
+
+    while True:
+        ret, frame = cam.read()
+
+        init_gray = cv2.cvtColor(init_frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        init_kpt, init_desc = orb.detectAndCompute(init_gray, None)
+        kpt, desc = orb.detectAndCompute(gray, None)
+
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+        matches = flann.knnMatch(init_desc, desc,k=2)
+
+        good = []
+        for m,n in matches:
+            if m.distance < 0.7 * n.distance:
+                good.append(m)
+
+        matchesMask = None
+        if len(good) > 5:
+            src_pts  = np.float32([ init_kpt[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+            dst_pts  = np.float32([ kpt[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            matchesMask = mask.ravel().tolist()
+
+            h, w = init_frame.shape[:2]
+            pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+            dst = cv2.perspectiveTransform(pts,M)
+            frame = cv2.polylines(frame, [np.int32(dst)], True, (0, 0, 255), 1, cv2.LINE_AA)
+        else:
+            print("Not enough matches...")
+            matchesMask = None
+
+        draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                   singlePointColor = None,
+                   matchesMask = matchesMask, # draw only inliers
+                   flags = 2)
+
+        output_frame = frame[:,:,:].copy()
+        cv2.drawMatches(init_frame, init_kpt, frame, kpt, good, output_frame, **draw_params)
+
+        cv2.imshow("Frame", output_frame)
+
+        if cv2.waitKey(1) & 0xff == ord('q'):
+            break
+
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    different_tracker()
 
 """
 OLD BRAIN MAIN
