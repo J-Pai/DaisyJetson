@@ -83,23 +83,23 @@ class DaisySpine:
 
     def forward(self):
         print("Forward")
-        self.pass_byte(1)
+        return self.pass_byte(1)
 
     def backward(self):
         print("Backward")
-        self.pass_byte(4)
+        return self.pass_byte(4)
 
     def halt(self):
         print("Stopping")
-        self.pass_byte(0)
+        return self.pass_byte(0)
 
     def turn(self, d):
         print("Turning: " + str(d))
 
         if d == 0:
-            self.pass_byte(2)
+            return self.pass_byte(2)
         elif d == 1:
-            self.pass_byte(3)
+            return self.pass_byte(3)
 
 if __name__ == "__main__":
     spine = None

@@ -24,6 +24,7 @@ def begin_tracking(name, data_queue):
     data_queue.close()
 
 def daisy_action(data_queue):
+    spine = DaisySpine()
     print("Getting Data")
     while True:
         data = None
@@ -31,6 +32,7 @@ def daisy_action(data_queue):
             data = data_queue.get()
         if data:
             print(data)
+        print(spine.forward())
         time.sleep(1)
 
 if __name__ == "__main__":

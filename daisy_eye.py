@@ -6,8 +6,8 @@ from multiprocessing import Queue
 
 EXPOSURE_1 = 0
 EXPOSURE_2 = 0
-FACE_W = 1024
-FACE_H = 768
+FACE_W = 1280
+FACE_H = 720
 DEFAULT_FACE_TARGET_BOX = (int(FACE_W/2) - 75, int(FACE_H/2) - 100,
         int(FACE_W/2) + 75, int(FACE_H/2) + 100)
 
@@ -15,6 +15,8 @@ TRACK_W = 640
 TRACK_H = 480
 DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 75, int(TRACK_H/2) - 100,
         int(TRACK_W/2) + 75, int(TRACK_H/2) + 100)
+
+FACE_COUNT = 5
 
 CORRECTION_THRESHOLD = 0.70
 
@@ -428,7 +430,7 @@ class DaisyEye:
                 overlap_pct = min(overlap_area / self.__bbox_area(face_bbox), \
                         overlap_area / self.__bbox_area(bbox))
 
-            if person_found and overlap_pct < CORRECTION_THRESHOLD:
+            if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
                 # Re-init tracker
                 bbox = (face_bbox[0], face_bbox[1], \
                         face_bbox[2] - face_bbox[0], face_bbox[3] - face_bbox[1])
