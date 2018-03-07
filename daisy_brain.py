@@ -3,6 +3,7 @@
 import face_recognition
 import cv2
 from daisy_spine import DaisySpine
+from daisy_spine import Dir
 from daisy_eye import DaisyEye
 from multiprocessing import Process, Queue
 import time
@@ -26,14 +27,22 @@ def begin_tracking(name, data_queue):
 def daisy_action(data_queue):
     spine = DaisySpine()
     print("Getting Data")
+
     while True:
-        data = None
-        while not data_queue.empty():
-            data = data_queue.get()
+        data = data_queue.get()
         if data:
             print(data)
-        print(spine.forward())
-        time.sleep(1)
+            (string, bbox, res) = data
+            center_x = int((bbox[0] + bbox[2]) / 2)
+            center_y = int((bbox[1] + bbox[3]) / 2)
+
+            res_center_x = int(res[0] / 2)
+            res_center_y = int(res[1] / 2)
+
+            if center_x > res_center_x:
+                print(spine.turn(Dir.CW))
+            elif center_x < res_center_x:
+                print(spine.turn(Dir.CCW))
 
 if __name__ == "__main__":
     #spine = DaisySpine()

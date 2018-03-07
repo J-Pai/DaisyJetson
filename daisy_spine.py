@@ -1,5 +1,10 @@
 import serial
 from sys import argv
+from enum import Enum
+
+class Dir(Enum):
+    CW = 0
+    CCW = 1
 
 class DaisySpine:
     ser = None
@@ -96,9 +101,9 @@ class DaisySpine:
     def turn(self, d):
         print("Turning: " + str(d))
 
-        if d == 0:
+        if d == Dir.CW:
             return self.pass_byte(2)
-        elif d == 1:
+        elif d == Dir.CCW:
             return self.pass_byte(3)
 
 if __name__ == "__main__":
