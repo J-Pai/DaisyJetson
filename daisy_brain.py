@@ -14,24 +14,30 @@ faces = {
 }
 
 name = "JessePai"
-
 data = None
+eye = None
 
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
     eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_correcting(name, debug=False)
+    eye.find_and_track_correcting(name, tracker="CSRT", debug=False)
+    data_queue.close()
 
 def daisy_action(data_queue):
     print("Getting Data")
     while True:
-        print(data_queue.get())
-        time.sleep(5)
+        data = None
+        while not data_queue.empty():
+            data = data_queue.get()
+        if data:
+            print(data)
+        time.sleep(1)
 
 if __name__ == "__main__":
     #spine = DaisySpine()
-    data = Queue()
+    #eye = DaisyEye(faces)
     #eye.find_and_track_correcting(name)
+    data = Queue()
     action_p = Process(target = daisy_action, args=(data, ))
     action_p.daemon = True
     action_p.start()

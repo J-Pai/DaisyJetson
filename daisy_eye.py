@@ -52,14 +52,14 @@ class DaisyEye:
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
             return
-        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 1, 1)
-        cv2.putText(frame, text, (bbox[0], bbox[1] - 3), \
+        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2, 1)
+        cv2.putText(frame, text, (bbox[0], bbox[1] - 4), \
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
     def __scale_frame(self, frame, scale_factor = 1):
         if scale_factor == 1:
             return frame
-        return cv2.resize(frame, (0,0), fx=self.scale_factor, fy=self.scale_factor)
+        return cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
 
     def __crop_frame(self, frame, crop_box):
         return frame[crop_box[1]:crop_box[3], crop_box[0]:crop_box[2],:].copy()
@@ -387,12 +387,15 @@ class DaisyEye:
             if face_process_frame:
                 small_frame = self.__crop_frame(frame, face_target_box)
 
-                face_locations = face_recognition.face_locations(small_frame, model="cnn")
-                face_encodings = face_recognition.face_encodings(small_frame, face_locations)
+                face_locations = face_recognition.face_locations(
+                        small_frame, model="cnn")
+                face_encodings = face_recognition.face_encodings(
+                        small_frame, face_locations)
 
 
                 for face_encoding in face_encodings:
-                    matches = face_recognition.compare_faces([self.known_faces[name]], face_encoding, 0.6)
+                    matches = face_recognition.compare_faces(
+                            [self.known_faces[name]], face_encoding, 0.6)
 
                     if len(matches) > 0 and matches[0]:
                         person_found = True
@@ -421,8 +424,10 @@ class DaisyEye:
 
             overlap_pct = 0
             if bbox and face_bbox:
-                overlap_pct = self.__bbox_overlap(face_bbox, bbox) / \
-                        self.__bbox_area(face_bbox)
+                overlap_area = self.__bbox_overlap(face_bbox, bbox)
+                overlap_pct = min(overlap_area / self.__bbox_area(face_bbox), \
+                        overlap_area / self.__bbox_area(bbox))
+
             if person_found and overlap_pct < CORRECTION_THRESHOLD:
                 # Re-init tracker
                 bbox = (face_bbox[0], face_bbox[1], \
@@ -432,7 +437,7 @@ class DaisyEye:
 
             if trackerObj is not None:
                 trackerBBox = None
-                status = None
+                status = False
 
                 if tracker == "DLIB":
                     status = trackerObj.update(frame)
@@ -447,7 +452,7 @@ class DaisyEye:
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
-            if not status:
+            if status:
                 self.__update_individual_position("NONE", bbox, res)
 
             if video_out:
@@ -470,6 +475,8 @@ class DaisyEye:
                     failedTrackers += tracker + " "
                 cv2.putText(output_frame, failedTrackers, (100, 80), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
+
+                output_frame = self.__scale_frame(output_frame, scale_factor=0.50)
 
                 cv2.imshow("Daisy's Vision", output_frame)
 
