@@ -5,49 +5,18 @@
 
 import numpy as np
 import cv2
-
-def camera_prep(video_capture):
-    ret, frame = video_capture.read()
-    if not ret:
-        print("Cannot read video file")
-        sys.exit()
-    print("Press q when image is ready")
-    while True:
-        ret, frame = video_capture.read()
-        cv2.imshow("Image Prep", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    cv2.destroyAllWindows()
-    return ret, frame
-
-def select_ROI(frame):
-    bbox = cv2.selectROI(frame, False)
-    cv2.destroyAllWindows()
-    return bbox;
-
-def crop_frame(frame, crop_box):
-    return frame[crop_box[1]:crop_box[3], crop_box[0]:crop_box[2],:].copy()
-
-cam = cv2.VideoCapture(1)
-
-ret, frame = camera_prep(cam)
-
-bbox = select_ROI(frame)
+imgname = "box.png"          # query image (small object)
+imgname2 = "box_in_scene.png" # train image (large scene)
 
 MIN_MATCH_COUNT = 4
 
 ## Create ORB object and BF object(using HAMMING)
 orb = cv2.ORB_create()
+img1 = cv2.imread(imgname)
+img2 = cv2.imread(imgname2)
 
-init_frame = frame
-ret, frame = cam.read()
-
-cv2.imshow("frame", init_frame)
-cv2.waitKey()
-cv2.destroyAllWindows()
-
-gray2 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-gray1 = cv2.cvtColor(init_frame, cv2.COLOR_BGR2GRAY)
+gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
 ## Find the keypoints and descriptors with ORB
 kpts1, descs1 = orb.detectAndCompute(gray1,None)
