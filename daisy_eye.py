@@ -459,7 +459,7 @@ class DaisyEye:
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
             if status:
-                self.__update_individual_position("NONE", bbox, res)
+                self.__update_individual_position("NONE", track_bbox, res)
 
             if video_out:
                 cv2.line(output_frame, (0, int(res[1]/2)), \
@@ -499,5 +499,5 @@ class DaisyEye:
         cv2.destroyAllWindows()
 
     def __update_individual_position(self, str_pos, track_bbox, res):
-        if self.data_queue is not None:
+        if self.data_queue is not None and self.data_queue.empty():
             self.data_queue.put((str_pos, track_bbox, res))

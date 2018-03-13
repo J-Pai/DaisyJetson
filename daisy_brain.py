@@ -10,7 +10,7 @@ import time
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
-#    "VladMok": "./faces/VMok-1.jpg",
+#    "VladMok": "./faces/Vlad.jpg",
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
@@ -25,12 +25,12 @@ def begin_tracking(name, data_queue):
     data_queue.close()
 
 def daisy_action(data_queue):
-#    spine = DaisySpine()
+    spine = DaisySpine()
     print("Getting Data")
-#    print(spine.read_all_lines())
+    print(spine.read_all_lines())
+    data = None
     while True:
-        data = None
-        while not data_queue.empty():
+        if not data_queue.empty():
             data = data_queue.get()
         if data:
             (string, bbox, res) = data
@@ -39,11 +39,13 @@ def daisy_action(data_queue):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            print(center_x, center_y)
-#            if center_x > res_center_x:
-#                spine.turn(Dir.CW)
-#            elif center_x < res_center_x:
-#                spine.turn(Dir.CCW)
+            #print(center_x, res_center_x)
+            if center_x < res_center_x:
+                print(spine.turn(Dir.CW))
+            elif center_x > res_center_x:
+                print(spine.turn(Dir.CCW))
+            else:
+                print(spine.halt())
 
 if __name__ == "__main__":
     #spine = DaisySpine()

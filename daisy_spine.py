@@ -44,6 +44,7 @@ class DaisySpine:
         return read_buffer;
 
     def pass_byte_basic(self, b):
+        self.ser.reset_output_buffer()
         self.ser.write(bytes([int(b)]))
 
     def pass_byte_debug(self, b):
@@ -70,7 +71,6 @@ class DaisySpine:
         self.pass_byte_basic(b)
         ret = self.read_line()
         #ret = self.read_all_lines()
-
         return ret
 
     def forward(self):
