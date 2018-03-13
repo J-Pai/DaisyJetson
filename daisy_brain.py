@@ -20,14 +20,14 @@ eye = None
 
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
-    eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_correcting(name, tracker="MEDIANFLOW", debug=False)
+    eye = DaisyEye(faces, data_queue, flipped = True)
+    eye.find_and_track_correcting(name, tracker="CSRT", debug=False)
     data_queue.close()
 
 def daisy_action(data_queue):
-    spine = DaisySpine()
+#    spine = DaisySpine()
     print("Getting Data")
-    print(spine.read_all_lines())
+#    print(spine.read_all_lines())
     while True:
         data = None
         while not data_queue.empty():
@@ -39,11 +39,11 @@ def daisy_action(data_queue):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-
-            if center_x > res_center_x:
-                spine.turn(Dir.CW)
-            elif center_x < res_center_x:
-                spine.turn(Dir.CCW)
+            print(center_x, center_y)
+#            if center_x > res_center_x:
+#                spine.turn(Dir.CW)
+#            elif center_x < res_center_x:
+#                spine.turn(Dir.CCW)
 
 if __name__ == "__main__":
     #spine = DaisySpine()

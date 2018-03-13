@@ -25,9 +25,10 @@ class DaisyEye:
     scale_factor = 0
     known_faces = {}
     data_queue = None
+    flipped = False
 
     def __init__(self, faces, data_queue = None, cam_num = 1, scale_factor = 1, \
-            res = (FACE_W, FACE_H)):
+            res = (FACE_W, FACE_H), flipped = False):
         self.cam = cv2.VideoCapture(cam_num);
 
         if not self.cam.isOpened():
@@ -50,6 +51,7 @@ class DaisyEye:
         self.cam.set(14, EXPOSURE_2)
 
         self.data_queue = data_queue
+        self.flipped = flipped
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
@@ -83,11 +85,10 @@ class DaisyEye:
         unscaled_bbox = None
 
         while True:
-            valid, frame = self.cam.read()
-            if not valid:
-                print("Failure to read camera")
-                return (-1,-1)
+            _, frame = self.cam.read()
             if video_out:
+                if self.flipped:
+                    frame = cv2.flip(frame, 0)
                 output_frame = frame.copy()
 
             rgb_small_frame = self.__scale_frame(frame, self.scale_factor)
@@ -122,7 +123,7 @@ class DaisyEye:
                     bbox = (left, top, right, bottom)
 
                     if video_out:
-                        self.__draw_bbox(valid, output_frame, bbox, (0, 0, 255), name)
+                        self.__draw_bbox(True, output_frame, bbox, (0, 0, 255), name)
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
@@ -131,7 +132,7 @@ class DaisyEye:
                 cv2.line(output_frame, (int(res[0]/2), 0), (int(res[0]/2), int(res[1])), (255,0,0), 1)
 
                 if target_box is not None:
-                    self.__draw_bbox(valid, output_frame, target_box, (255, 0, 0), "Target Zone")
+                    self.__draw_bbox(True, output_frame, target_box, (255, 0, 0), "Target Zone")
                 cv2.putText(output_frame, "FPS: " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                 cv2.imshow("Locate_Target", output_frame)
 
@@ -184,13 +185,11 @@ class DaisyEye:
         return tracker
 
     def view(self, face_bbox = DEFAULT_FACE_TARGET_BOX, bbox_list = []):
-        ret, frame = self.cam.read()
-        if not ret:
-            print("Cannot read video file")
-            sys.exit()
         print("Press q when image is ready")
         while True:
-            ret, frame = self.cam.read()
+            _, frame = self.cam.read()
+            if self.flipped:
+                frame = cv2.flip(frame, 0)
             output_frame = frame.copy()
 
             self.__draw_bbox(ret, output_frame, face_bbox, (255,0,0), "Target")
@@ -223,12 +222,9 @@ class DaisyEye:
         bbox = obj
 
         if bbox is None or frame is None:
-            valid, frame = self.view()
+            _, frame = self.view()
             if video_out:
                 output_frame = frame.copy()
-            if not valid:
-                print("Failure to read camera")
-                return -1
             bbox = self.__select_ROI(frame)
         else:
             scaled = (int(obj[0] * res[0] / face_res[0]), \
@@ -244,12 +240,11 @@ class DaisyEye:
         bbox = None
 
         while True:
-            valid, frame = self.cam.read()
+            _, frame = self.cam.read()
             if video_out:
+                if self.flipped:
+                    frame = cv2.flip(frame, 0)
                 output_frame = frame.copy()
-            if not valid:
-                print("Failure to read camera")
-                return -1
 
             timer = cv2.getTickCount()
 
@@ -376,11 +371,9 @@ class DaisyEye:
         while True:
             output_frame = None
 
-            valid, frame = self.cam.read()
-
-            if not valid:
-                print("Failure to read face camera")
-                return -1
+            _, frame = self.cam.read()
+            if self.flipped:
+                frame = cv2.flip(frame, 0)
 
             timer = cv2.getTickCount()
 
@@ -474,9 +467,9 @@ class DaisyEye:
                 cv2.line(output_frame, (int(res[0]/2), 0),
                         (int(res[0]/2), int(res[1])), (255,0,0), 1)
 
-                self.__draw_bbox(valid, output_frame, track_target_box, (255, 0, 0), "TRACK_TARGET")
+                self.__draw_bbox(True, output_frame, track_target_box, (255, 0, 0), "TRACK_TARGET")
 
-                self.__draw_bbox(valid, output_frame, face_target_box, (255, 0, 0), "FACE_TARGET")
+                self.__draw_bbox(True, output_frame, face_target_box, (255, 0, 0), "FACE_TARGET")
 
                 self.__draw_bbox(status, output_frame, track_bbox, (0, 255, 0), tracker)
 
