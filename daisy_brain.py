@@ -25,21 +25,21 @@ def begin_tracking(name, data_queue):
     data_queue.close()
 
 def daisy_action(data_queue):
-    spine = DaisySpine()
+    #spine = DaisySpine()
     print("Getting Data")
-    print(spine.read_all_lines())
+    #print(spine.read_all_lines())
     data = None
     while True:
         if not data_queue.empty():
             data = data_queue.get()
         if data:
-            (string, bbox, res) = data
+            (string, bbox, distance, res) = data
             center_x = int((bbox[0] + bbox[2]) / 2)
             center_y = int((bbox[1] + bbox[3]) / 2)
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            #print(center_x, res_center_x)
+            # print(center_x, res_center_x, distance)
             if center_x < res_center_x:
                 print(spine.turn(Dir.CW))
             elif center_x > res_center_x:

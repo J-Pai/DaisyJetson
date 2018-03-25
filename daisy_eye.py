@@ -6,13 +6,17 @@ from multiprocessing import Queue
 
 EXPOSURE_1 = 0
 EXPOSURE_2 = 0
-FACE_W = 1280
-FACE_H = 720
+
+RGB_W = 800
+RGB_H = 600
+
+FACE_W = RGB_W
+FACE_H = RGB_H
 DEFAULT_FACE_TARGET_BOX = (int(FACE_W/2) - 75, int(FACE_H/2) - 100,
         int(FACE_W/2) + 75, int(FACE_H/2) + 100)
 
-TRACK_W = 1280
-TRACK_H = 720
+TRACK_W = RGB_W
+TRACK_H = RGB_H
 DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 340, int(TRACK_H/2) - 220,
         int(TRACK_W/2) + 340, int(TRACK_H/2) + 220)
 
@@ -197,8 +201,6 @@ class DaisyEye:
         track_bbox = None
 
         while True:
-            output_frame = None
-
             _, frame = self.cam.read()
             if self.flipped:
                 frame = cv2.flip(frame, 0)
@@ -242,9 +244,6 @@ class DaisyEye:
             face_process_frame = not face_process_frame
             status = False
 
-            if video_out:
-                output_frame = frame.copy()
-
             overlap_pct = 0
             track_area = self.__bbox_area(track_bbox)
             if track_area > 0 and face_bbox:
@@ -287,34 +286,34 @@ class DaisyEye:
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
             if status:
-                self.__update_individual_position("NONE", track_bbox, res)
+                self.__update_individual_position("NONE", track_bbox, -1, res)
 
             if video_out:
-                cv2.line(output_frame, (0, int(res[1]/2)), \
+                cv2.line(frame, (0, int(res[1]/2)), \
                         (int(res[0]), int(res[1]/2)), (255,0,0), 1)
-                cv2.line(output_frame, (int(res[0]/2), 0),
+                cv2.line(frame, (int(res[0]/2), 0),
                         (int(res[0]/2), int(res[1])), (255,0,0), 1)
 
-                self.__draw_bbox(True, output_frame, track_target_box, (255, 0, 0), "TRACK_TARGET")
+                self.__draw_bbox(True, frame, track_target_box, (255, 0, 0), "TRACK_TARGET")
 
-                self.__draw_bbox(True, output_frame, face_target_box, (255, 0, 0), "FACE_TARGET")
+                self.__draw_bbox(True, frame, face_target_box, (255, 0, 0), "FACE_TARGET")
 
-                self.__draw_bbox(status, output_frame, track_bbox, (0, 255, 0), tracker)
+                self.__draw_bbox(status, frame, track_bbox, (0, 255, 0), tracker)
 
-                self.__draw_bbox(person_found, output_frame, face_bbox, (0, 0, 255), name)
+                self.__draw_bbox(person_found, frame, face_bbox, (0, 0, 255), name)
 
-                cv2.putText(output_frame, "FPS : " + str(int(fps)), (100,50), \
+                cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
 
                 failedTrackers = "FAILED: "
                 if not status:
                     failedTrackers += tracker + " "
-                cv2.putText(output_frame, failedTrackers, (100, 80), \
+                cv2.putText(frame, failedTrackers, (100, 80), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
 
-                output_frame = self.__scale_frame(output_frame, scale_factor=0.50)
+                frame = self.__scale_frame(frame, scale_factor=0.50)
 
-                cv2.imshow("Daisy's Vision", output_frame)
+                cv2.imshow("Daisy's Vision", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     print("Interrupted")
@@ -326,6 +325,6 @@ class DaisyEye:
 
         cv2.destroyAllWindows()
 
-    def __update_individual_position(self, str_pos, track_bbox, res):
+    def __update_individual_position(self, str_pos, track_bbox, distance, res):
         if self.data_queue is not None and self.data_queue.empty():
-            self.data_queue.put((str_pos, track_bbox, res))
+            self.data_queue.put((str_pos, track_bbox, distance, res))

@@ -144,7 +144,7 @@ def view_kinect(tracker = "CSRT", min_range = 0, max_range = 1000,
         if bbox is not None:
             track_bbox = bbox
 
-        fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
+        fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
         if video_out:
             output_frame = c.copy()
@@ -161,7 +161,7 @@ def view_kinect(tracker = "CSRT", min_range = 0, max_range = 1000,
 
         listener.release(frames)
 
-        key = cv2.waitKey(delay=1)
+        key = cv2.waitKey(1) & 0xff
         if key == ord('q'):
             break
     device.stop()

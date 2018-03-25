@@ -58,7 +58,6 @@ class DaisySpine:
         print("Passing byte " + str(b))
         self.pass_byte_basic(b)
         ret = self._read_line()
-        #ret = self.read_all_lines()
 
         print("+++ DONE +++")
         return ret
@@ -70,7 +69,6 @@ class DaisySpine:
 
         self.pass_byte_basic(b)
         ret = self.read_line()
-        #ret = self.read_all_lines()
         return ret
 
     def forward(self):
@@ -86,8 +84,6 @@ class DaisySpine:
         return self.pass_byte(0)
 
     def turn(self, d):
-        #print("Turning: " + str(d))
-
         if d == Dir.CW:
             return self.pass_byte(2)
         elif d == Dir.CCW:
