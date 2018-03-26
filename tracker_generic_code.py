@@ -9,7 +9,7 @@ def track_object():
     video.set(4, 480)
 
     ok, frame = video.read()
-    tracker = cv2.TrackerCSRT_create()      # Create the tracker object
+    tracker = cv2.TrackerKCF_create()           # Create the tracker object
     bbox = cv2.selectROI(frame, False)          # Select the desired object to track
     ok = tracker.init(frame, bbox)              # Initialize tracker with bbox and starting frame
     while True:

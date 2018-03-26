@@ -1,4 +1,5 @@
 import serial
+import struct
 from sys import argv
 from enum import Enum
 
@@ -8,7 +9,7 @@ class Dir(Enum):
 
 class DaisySpine:
     ser = None
-    def __init__(self, com_port = "/dev/ttyACM0", baud_rate = 28800, time_out = 1):
+    def __init__(self, com_port = "/dev/ttyACM0", baud_rate = 9600, time_out = 1):
         self.ser = serial.Serial(com_port, baud_rate, timeout = time_out)
 
     def read_line(self):
@@ -57,7 +58,7 @@ class DaisySpine:
 
         print("Passing byte " + str(b))
         self.pass_byte_basic(b)
-        ret = self._read_line()
+        ret = self.read_line()
 
         print("+++ DONE +++")
         return ret
@@ -89,6 +90,18 @@ class DaisySpine:
         elif d == Dir.CCW:
             return self.pass_byte(3)
 
+    def move(self, leftSpeed, rightSpeed):
+        leftByte = struct.pack(">h", leftSpeed)
+        rightByte = struct.pack(">h", rightSpeed)
+
+        cmdStr = [5]
+        cmdStr.extend(bytearray(leftByte))
+        cmdStr.extend(bytearray(rightByte))
+
+        self.ser.reset_input_buffer()
+        self.ser.write(cmdStr)
+        return self.read_line()
+
 if __name__ == "__main__":
     spine = None
     if len(argv) != 1:
@@ -102,4 +115,4 @@ if __name__ == "__main__":
         # spine.forward()
         input_str = input()
         if (len(input_str) > 0):
-            print(spine.pass_byte(input_str))
+            print(spine.move(int(input_str) * 10, int(input_str)))

@@ -25,9 +25,9 @@ def begin_tracking(name, data_queue):
     data_queue.close()
 
 def daisy_action(data_queue):
-    #spine = DaisySpine()
+    spine = DaisySpine()
     print("Getting Data")
-    #print(spine.read_all_lines())
+    print(spine.read_all_lines())
     data = None
     while True:
         if not data_queue.empty():
