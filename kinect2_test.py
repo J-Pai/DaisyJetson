@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 import sys
 import face_recognition
-import dlib
 
 # TODO ADD THIS
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
@@ -67,11 +66,6 @@ def __init_tracker(frame, bbox, tracker_type = "BOOSTING"):
         tracker = cv2.TrackerMOSSE_create()
     if tracker_type == "CSRT":
         tracker = cv2.TrackerCSRT_create()
-    if tracker_type == "DLIB":
-        tracker = dlib.correlation_tracker()
-        tracker.start_track(frame, \
-                dlib.rectangle(bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]))
-        return tracker
 
     ret = tracker.init(frame, bbox)
 
@@ -232,17 +226,11 @@ def find_and_track_kinect(name, tracker = "CSRT",
         status = False
 
         if trackerObj is not None:
-            if tracker == "DLIB":
-                status = trackerObj.update(c)
-                rect = trackerObj.get_position()
-                bbox = (int(rect.left()), int(rect.top()), \
-                        int(rect.right()), int(rect.bottom()))
-            else:
-                status, trackerBBox = trackerObj.update(c)
-                bbox = (int(trackerBBox[0]),
-                    int(trackerBBox[1]),
-                    int(trackerBBox[0] + trackerBBox[2]),
-                    int(trackerBBox[1] + trackerBBox[3]))
+            status, trackerBBox = trackerObj.update(c)
+            bbox = (int(trackerBBox[0]),
+                int(trackerBBox[1]),
+                int(trackerBBox[0] + trackerBBox[2]),
+                int(trackerBBox[1] + trackerBBox[3]))
 
         if bbox is not None:
             track_bbox = bbox

@@ -1,24 +1,42 @@
+import numpy as np
 import cv2
-import dlib
 import face_recognition
 import sys
 from multiprocessing import Queue
+from pylibfreenect2 import Freenect2, SyncMultiFrameListener
+from pylibfreenect2 import FrameType, Registration, Frame
+from pylibfreenect2 import setGlobalLogger
+
+setGlobalLogger(None)
+try:
+    print("OpenGL Pipeline")
+    from pylibfreenect2 import OpenGLPacketPipeline
+    pipeline = OpenGLPacketPipeline()
+except:
+    try:
+        print("OpenCL Pipeline")
+        from pylibfreenect2 import OpenCLPacketPipeline
+        pipeline = OpenCLPacketPipeline()
+    except:
+        print("CPU Pipeline")
+        from pylibfreenect2 import CpuPacketPipeline
+        pipeline = CpuPacketPipeline()
 
 EXPOSURE_1 = 0
 EXPOSURE_2 = 0
 
-RGB_W = 800
-RGB_H = 600
+RGB_W = 1920
+RGB_H = 1080
 
 FACE_W = RGB_W
 FACE_H = RGB_H
-DEFAULT_FACE_TARGET_BOX = (int(FACE_W/2) - 75, int(FACE_H/2) - 100,
-        int(FACE_W/2) + 75, int(FACE_H/2) + 100)
+DEFAULT_FACE_TARGET_BOX = (int(RGB_W/2) - 125, int(RGB_H/2) - 125,
+        int(RGB_W/2) + 125, int(RGB_H/2) + 125)
 
 TRACK_W = RGB_W
 TRACK_H = RGB_H
-DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 340, int(TRACK_H/2) - 220,
-        int(TRACK_W/2) + 340, int(TRACK_H/2) + 220)
+DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 340, int(TRACK_H/2) - 420,
+        int(TRACK_W/2) + 340, int(TRACK_H/2) + 20)
 
 FACE_COUNT = 0
 
@@ -32,11 +50,11 @@ class DaisyEye:
 
     def __init__(self, faces, data_queue = None, cam_num = 1,
             res = (FACE_W, FACE_H), flipped = False):
-        self.cam = cv2.VideoCapture(cam_num);
-
-        if not self.cam.isOpened():
-            print("Could not open camera...")
-            sys.exit()
+        if cam_num != -1:
+            self.cam = cv2.VideoCapture(cam_num);
+            if not self.cam.isOpened():
+                print("Could not open camera...")
+                sys.exit()
 
         for person in faces:
             image = face_recognition.load_image_file(faces[person])
@@ -47,9 +65,10 @@ class DaisyEye:
             else:
                 print("\tCould not find face for person...")
 
-        self.cam.set(3, res[0])
-        self.cam.set(4, res[1])
-        self.cam.set(14, EXPOSURE_2)
+        if cam_num != -1:
+            self.cam.set(3, res[0])
+            self.cam.set(4, res[1])
+            self.cam.set(14, EXPOSURE_2)
 
         self.data_queue = data_queue
         self.flipped = flipped
@@ -243,19 +262,12 @@ class DaisyEye:
                 face_count = 0
 
             if trackerObj is not None:
-                status = False
+                status, trackerBBox = trackerObj.update(small_frame)
+                bbox = (int(trackerBBox[0]), \
+                        int(trackerBBox[1]), \
+                        int(trackerBBox[0] + trackerBBox[2]), \
+                        int(trackerBBox[1] + trackerBBox[3]))
 
-                if tracker == "DLIB":
-                    status = trackerObj.update(small_frame)
-                    rect = trackerObj.get_position()
-                    bbox = (int(rect.left()), int(rect.top()), \
-                            int(rect.right()), int(rect.bottom()))
-                else:
-                    status, trackerBBox = trackerObj.update(small_frame)
-                    bbox = (int(trackerBBox[0]), \
-                            int(trackerBBox[1]), \
-                            int(trackerBBox[0] + trackerBBox[2]), \
-                            int(trackerBBox[1] + trackerBBox[3]))
             if bbox is not None:
                 track_bbox = (bbox[0] + track_target_box[0], \
                         bbox[1] + track_target_box[1], \
@@ -303,6 +315,159 @@ class DaisyEye:
                 print(fps, track_bbox, face_bbox)
 
         cv2.destroyAllWindows()
+
+    def __clean_color(self, color, bigdepth, min_range, max_range):
+        color[(bigdepth < min_range) | (bigdepth > max_range)] = 0
+
+    def find_and_track_kinect(self, name, tracker = "CSRT",
+            min_range = 0, max_range = 2000,
+            face_target_box = DEFAULT_FACE_TARGET_BOX,
+            res = (RGB_W, RGB_H),
+            video_out = True, debug = True):
+
+        fn = Freenect2()
+        num_devices = fn.enumerateDevices()
+
+        if num_devices == 0:
+            print("No device connected!")
+
+        serial = fn.getDeviceSerialNumber(0)
+        device = fn.openDevice(serial, pipeline = pipeline)
+
+        listener = SyncMultiFrameListener(FrameType.Color | FrameType.Depth)
+
+        device.setColorFrameListener(listener)
+        device.setIrAndDepthFrameListener(listener)
+
+        device.start()
+
+        registration = Registration(device.getIrCameraParams(),
+                device.getColorCameraParams())
+
+        undistorted = Frame(512, 424, 4)
+        registered = Frame(512, 424, 4)
+        bigdepth = Frame(1920, 1082, 4)
+
+
+        trackerObj = None
+        face_count = 5
+        face_process_frame = True
+
+        bbox = None
+        face_bbox = None
+        track_bbox = None
+
+        while True:
+            timer = cv2.getTickCount()
+
+            person_found = False
+
+            frames = listener.waitForNewFrame()
+
+            color = frames["color"]
+            depth = frames["depth"]
+
+            registration.apply(color, depth, undistorted, registered, bigdepth=bigdepth)
+
+            bd = np.resize(bigdepth.asarray(np.float32), (1080, 1920))
+            c = cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR)
+
+            #self.__clean_color(c, bd, min_range, max_range)
+
+            if face_process_frame:
+                small_c = self.__crop_frame(c, face_target_box)
+                face_locations = face_recognition.face_locations(small_c, model="cnn")
+                face_encodings = face_recognition.face_encodings(small_c, face_locations)
+                for face_encoding in face_encodings:
+                    matches = face_recognition.compare_faces(
+                            [self.known_faces[name]], face_encoding, 0.6)
+                    if len(matches) > 0 and matches[0]:
+                        person_found = True
+                        face_count += 1
+                        (top, right, bottom, left) = face_locations[0]
+
+                        left += face_target_box[0]
+                        top += face_target_box[1]
+                        right += face_target_box[0]
+                        bottom += face_target_box[1]
+
+                        face_bbox = (left, top, right, bottom)
+
+                        person_found = True
+
+                        break
+            face_process_frame = not face_process_frame
+
+            overlap_pct = 0
+            track_area = self.__bbox_area(track_bbox)
+            if track_area > 0 and face_bbox:
+                overlap_area = self.__bbox_overlap(face_bbox, track_bbox)
+                overlap_pct = min(overlap_area / self.__bbox_area(face_bbox),
+                        overlap_area / self.__bbox_area(track_bbox))
+
+            if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
+                bbox = (face_bbox[0],
+                        face_bbox[1],
+                        face_bbox[2] - face_bbox[0],
+                        face_bbox[3] - face_bbox[1])
+                trackerObj = self.__init_tracker(c, bbox, tracker)
+                face_count = 0
+
+            status = False
+
+            if trackerObj is not None:
+                status, trackerBBox = trackerObj.update(c)
+                bbox = (int(trackerBBox[0]),
+                    int(trackerBBox[1]),
+                    int(trackerBBox[0] + trackerBBox[2]),
+                    int(trackerBBox[1] + trackerBBox[3]))
+
+            if bbox is not None:
+                track_bbox = bbox
+
+            fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
+
+            w = 0
+            h = 0
+
+            if status:
+                w = track_bbox[0] + int((track_bbox[2] - track_bbox[0])/2)
+                h = track_bbox[1] + int((track_bbox[3] - track_bbox[1])/2)
+                if (w < res[0] and w >= 0 and h < res[1] and h >= 0):
+                    distanceAtCenter =  bd[h][w]
+                    self.__update_individual_position("NONE", track_bbox, distanceAtCenter, res)
+
+            if video_out:
+                cv2.line(c, (w, 0),
+                        (w, int(res[1])), (0,255,0), 1)
+                cv2.line(c, (0, h), \
+                        (int(res[0]), h), (0,255,0), 1)
+
+                self.__draw_bbox(True, c, face_target_box, (255, 0, 0), "FACE_TARGET")
+                self.__draw_bbox(status, c, track_bbox, (0, 255, 0), tracker)
+                self.__draw_bbox(person_found, c, face_bbox, (0, 0, 255), name)
+
+                c = self.__scale_frame(c, scale_factor = 0.5)
+
+                cv2.putText(c, "FPS : " + str(int(fps)), (100,50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,255), 1)
+                if not status:
+                    failedTrackers = "FAILED: "
+                    failedTrackers += tracker + " "
+                    cv2.putText(c, failedTrackers, (100, 80),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
+
+                cv2.imshow("color", c)
+
+            listener.release(frames)
+
+            key = cv2.waitKey(1) & 0xff
+            if key == ord('q'):
+                break
+
+        cv2.destroyAllWindows()
+        device.stop()
+        device.close()
 
     def __update_individual_position(self, str_pos, track_bbox, distance, res):
         if self.data_queue is not None and self.data_queue.empty():

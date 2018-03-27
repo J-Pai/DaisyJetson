@@ -18,10 +18,14 @@ name = "JessePai"
 data = None
 eye = None
 
+X_THRES = 100
+Z_CENTER = 1500
+Z_THRES = 100
+
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
-    eye = DaisyEye(faces, data_queue, flipped = True)
-    eye.find_and_track_correcting(name, tracker="CSRT", debug=False)
+    eye = DaisyEye(faces, data_queue, cam_num = -1, flipped = True)
+    eye.find_and_track_kinect(name, "CSRT", debug=False)
     data_queue.close()
 
 def daisy_action(data_queue):
@@ -39,13 +43,18 @@ def daisy_action(data_queue):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            # print(center_x, res_center_x, distance)
-            if center_x < res_center_x:
+            print(center_x, res_center_x, distance, res)
+            if center_x < res_center_x - X_THRES:
                 print(spine.turn(Dir.CW))
-            elif center_x > res_center_x:
+            elif center_x > res_center_x + X_THRES:
                 print(spine.turn(Dir.CCW))
+            elif distance > Z_CENTER + Z_THRES:
+                print(spine.forward())
+            elif distance < Z_CENTER - Z_THRES:
+                print(spine.backward())
             else:
                 print(spine.halt())
+            data = None
 
 if __name__ == "__main__":
     #spine = DaisySpine()
@@ -55,4 +64,7 @@ if __name__ == "__main__":
     action_p = Process(target = daisy_action, args=(data, ))
     action_p.daemon = True
     action_p.start()
+    print(action_p.pid)
     begin_tracking("JessePai", data)
+    action_p.terminate()
+    print("Brain Terminated")
