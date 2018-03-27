@@ -26,12 +26,11 @@ CORRECTION_THRESHOLD = 0.50
 
 class DaisyEye:
     cam = None
-    scale_factor = 0
     known_faces = {}
     data_queue = None
     flipped = False
 
-    def __init__(self, faces, data_queue = None, cam_num = 1, scale_factor = 1, \
+    def __init__(self, faces, data_queue = None, cam_num = 1,
             res = (FACE_W, FACE_H), flipped = False):
         self.cam = cv2.VideoCapture(cam_num);
 
@@ -47,8 +46,6 @@ class DaisyEye:
                 self.known_faces[person] = face_encoding_list[0]
             else:
                 print("\tCould not find face for person...")
-
-        self.scale_factor = scale_factor
 
         self.cam.set(3, res[0])
         self.cam.set(4, res[1])
@@ -145,18 +142,6 @@ class DaisyEye:
                 int(bbox[3] * res2[1] / res1[1]))
         return scaled
 
-
-    def find_and_track(self, name, tracker = "CSRT", video_out = True, debug = True):
-        print("Finding and Tracking...")
-        init_bbox, frame = self.locate_target("JessePai", ret = True, video_out = video_out, debug = debug)
-        if type(init_bbox) is not tuple:
-            sys.exit()
-        print(init_bbox)
-        self.track_object(init_bbox, frame, tracker = tracker, video_out = video_out, debug = debug)
-        cv2.destroyAllWindows()
-        self.cam.release()
-        print("Done!")
-
     """
     Standard bbox layout (left, top, right, bottom)
     bbox1 overlaps with bbox2?
@@ -180,10 +165,10 @@ class DaisyEye:
         (left, top, right, bottom) = bbox
         return (right - left) * (bottom - top)
 
-    def find_and_track_correcting(self, name, tracker = "CSRT", \
-            track_target_box = DEFAULT_TRACK_TARGET_BOX, \
-            face_target_box = DEFAULT_FACE_TARGET_BOX, \
-            res = (FACE_W, FACE_H), \
+    def find_and_track_correcting(self, name, tracker = "CSRT",
+            track_target_box = DEFAULT_TRACK_TARGET_BOX,
+            face_target_box = DEFAULT_FACE_TARGET_BOX,
+            res = (FACE_W, FACE_H),
             video_out = True, debug = True):
         print("Finding and Tracking with Correction")
 
@@ -233,11 +218,6 @@ class DaisyEye:
                         top += face_target_box[1]
                         right += face_target_box[0]
                         bottom += face_target_box[1]
-
-                        left *= int(1/self.scale_factor)
-                        top *= int(1/self.scale_factor)
-                        right *= int(1/self.scale_factor)
-                        bottom *= int(1/self.scale_factor)
 
                         face_bbox = (left, top, right, bottom)
 
