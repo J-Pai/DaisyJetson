@@ -5,6 +5,8 @@ import cv2
 import sys
 import face_recognition
 import dlib
+
+# TODO ADD THIS
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
 from pylibfreenect2 import setGlobalLogger
@@ -24,6 +26,7 @@ except:
         from pylibfreenect2 import CpuPacketPipeline
         pipeline = CpuPacketPipeline()
 
+# TODO Update daisy eye with these params...
 RGB_W = 1920
 RGB_H = 1080
 
@@ -64,6 +67,11 @@ def __init_tracker(frame, bbox, tracker_type = "BOOSTING"):
         tracker = cv2.TrackerMOSSE_create()
     if tracker_type == "CSRT":
         tracker = cv2.TrackerCSRT_create()
+    if tracker_type == "DLIB":
+        tracker = dlib.correlation_tracker()
+        tracker.start_track(frame, \
+                dlib.rectangle(bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]))
+        return tracker
 
     ret = tracker.init(frame, bbox)
 
@@ -75,6 +83,7 @@ def __select_ROI(frame):
     bbox = cv2.selectROI(frame, False)
     cv2.destroyAllWindows()
     return bbox;
+
 def __scale_frame(frame, scale_factor = 1):
     if scale_factor == 1:
         return frame
@@ -102,6 +111,8 @@ def __bbox_area(bbox):
 def __crop_frame(frame, crop_box):
     return frame[crop_box[1]:crop_box[3], crop_box[0]:crop_box[2],:].copy()
 
+# TODO Add this. Does the green screen effect. See if there is a faster way to
+# do this. This part is quite intensive.
 def __clean_color(color, bigdepth, min_range, max_range):
     color[(bigdepth < min_range) | (bigdepth > max_range)] = 0
 
@@ -111,8 +122,10 @@ faces = {
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
+# TODO Add this and check if having the encoding list generated here makes
+# a difference in processing.
 def find_and_track_kinect(name, tracker = "CSRT",
-        min_range = 1000, max_range = 1700,
+        min_range = 0, max_range = 1700,
         face_target_box = DEFAULT_FACE_TARGET_BOX,
         res = (RGB_W, RGB_H),
         video_out = True, debug = True):
@@ -219,8 +232,14 @@ def find_and_track_kinect(name, tracker = "CSRT",
         status = False
 
         if trackerObj is not None:
-            status, trackerBBox = trackerObj.update(c)
-            bbox = (int(trackerBBox[0]),
+            if tracker == "DLIB":
+                status = trackerObj.update(c)
+                rect = trackerObj.get_position()
+                bbox = (int(rect.left()), int(rect.top()), \
+                        int(rect.right()), int(rect.bottom()))
+            else:
+                status, trackerBBox = trackerObj.update(c)
+                bbox = (int(trackerBBox[0]),
                     int(trackerBBox[1]),
                     int(trackerBBox[0] + trackerBBox[2]),
                     int(trackerBBox[1] + trackerBBox[3]))
@@ -272,6 +291,7 @@ def find_and_track_kinect(name, tracker = "CSRT",
 
 def __update_individual_position(str_pos, track_bbox, distance, res):
     print(str_pos, track_bbox, distance, res)
+
 if __name__ == "__main__":
     find_and_track_kinect("JessePai")
 

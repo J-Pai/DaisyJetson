@@ -243,7 +243,6 @@ class DaisyEye:
                 face_count = 0
 
             if trackerObj is not None:
-                trackerBBox = None
                 status = False
 
                 if tracker == "DLIB":
