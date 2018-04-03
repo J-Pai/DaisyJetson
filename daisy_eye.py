@@ -35,8 +35,8 @@ DEFAULT_FACE_TARGET_BOX = (int(RGB_W/2) - 125, int(RGB_H/2) - 125,
 
 TRACK_W = RGB_W
 TRACK_H = RGB_H
-DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 340, int(TRACK_H/2) - 420,
-        int(TRACK_W/2) + 340, int(TRACK_H/2) + 20)
+DEFAULT_TRACK_TARGET_BOX = (int(TRACK_W/2) - 600, int(TRACK_H/2) - 400,
+        int(TRACK_W/2) + 600, int(TRACK_H/2) + 400)
 
 FACE_COUNT = 0
 
@@ -247,31 +247,31 @@ class DaisyEye:
             track_area = self.__bbox_area(track_bbox)
             if track_area > 0 and face_bbox:
                 overlap_area = self.__bbox_overlap(face_bbox, track_bbox)
-                overlap_pct = min(overlap_area / self.__bbox_area(face_bbox), \
+                overlap_pct = min(overlap_area / self.__bbox_area(face_bbox),
                         overlap_area / self.__bbox_area(track_bbox))
 
             small_frame = self.__crop_frame(frame, track_target_box)
 
             if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
                 # Re-init tracker
-                bbox = (face_bbox[0] - track_target_box[0], \
-                        face_bbox[1] - track_target_box[1], \
-                        face_bbox[2] - face_bbox[0], \
+                bbox = (face_bbox[0] - track_target_box[0],
+                        face_bbox[1] - track_target_box[1],
+                        face_bbox[2] - face_bbox[0],
                         face_bbox[3] - face_bbox[1])
                 trackerObj = self.__init_tracker(small_frame, bbox, tracker)
                 face_count = 0
 
             if trackerObj is not None:
                 status, trackerBBox = trackerObj.update(small_frame)
-                bbox = (int(trackerBBox[0]), \
-                        int(trackerBBox[1]), \
-                        int(trackerBBox[0] + trackerBBox[2]), \
+                bbox = (int(trackerBBox[0]),
+                        int(trackerBBox[1]),
+                        int(trackerBBox[0] + trackerBBox[2]),
                         int(trackerBBox[1] + trackerBBox[3]))
 
             if bbox is not None:
-                track_bbox = (bbox[0] + track_target_box[0], \
-                        bbox[1] + track_target_box[1], \
-                        bbox[2] + track_target_box[0], \
+                track_bbox = (bbox[0] + track_target_box[0],
+                        bbox[1] + track_target_box[1],
+                        bbox[2] + track_target_box[0],
                         bbox[3] + track_target_box[1])
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
@@ -280,7 +280,7 @@ class DaisyEye:
                 self.__update_individual_position("NONE", track_bbox, -1, res)
 
             if video_out:
-                cv2.line(frame, (0, int(res[1]/2)), \
+                cv2.line(frame, (0, int(res[1]/2)),
                         (int(res[0]), int(res[1]/2)), (255,0,0), 1)
                 cv2.line(frame, (int(res[0]/2), 0),
                         (int(res[0]/2), int(res[1])), (255,0,0), 1)
@@ -307,7 +307,7 @@ class DaisyEye:
                 cv2.imshow("Daisy's Vision", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    print("Interrupted")
+                    self.__update_individual_position("STOP", track_bbox, distanceAtCenter, res)
                     cv2.destroyAllWindows()
                     return 0
 
@@ -321,6 +321,7 @@ class DaisyEye:
 
     def find_and_track_kinect(self, name, tracker = "CSRT",
             min_range = 0, max_range = 2000,
+            track_target_box = DEFAULT_TRACK_TARGET_BOX,
             face_target_box = DEFAULT_FACE_TARGET_BOX,
             res = (RGB_W, RGB_H),
             video_out = True, debug = True):
@@ -356,6 +357,11 @@ class DaisyEye:
         bbox = None
         face_bbox = None
         track_bbox = None
+
+        head_h = 0
+        body_left_w = 0
+        body_right_w = 0
+        center_w = 0
 
         while True:
             timer = cv2.getTickCount()
@@ -405,25 +411,31 @@ class DaisyEye:
                 overlap_pct = min(overlap_area / self.__bbox_area(face_bbox),
                         overlap_area / self.__bbox_area(track_bbox))
 
+            small_c = self.__crop_frame(c, track_target_box)
+
             if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
-                bbox = (face_bbox[0],
-                        face_bbox[1],
+                center_w = int((face_bbox[0] + face_))
+                bbox = (face_bbox[0] - track_target_box[0],
+                        face_bbox[1] - track_target_box[1],
                         face_bbox[2] - face_bbox[0],
                         face_bbox[3] - face_bbox[1])
-                trackerObj = self.__init_tracker(c, bbox, tracker)
+                trackerObj = self.__init_tracker(small_c, bbox, tracker)
                 face_count = 0
 
             status = False
 
             if trackerObj is not None:
-                status, trackerBBox = trackerObj.update(c)
+                status, trackerBBox = trackerObj.update(small_c)
                 bbox = (int(trackerBBox[0]),
-                    int(trackerBBox[1]),
-                    int(trackerBBox[0] + trackerBBox[2]),
-                    int(trackerBBox[1] + trackerBBox[3]))
+                        int(trackerBBox[1]),
+                        int(trackerBBox[0] + trackerBBox[2]),
+                        int(trackerBBox[1] + trackerBBox[3]))
 
             if bbox is not None:
-                track_bbox = bbox
+                track_bbox = (bbox[0] + track_target_box[0],
+                        bbox[1] + track_target_box[1],
+                        bbox[2] + track_target_box[0],
+                        bbox[3] + track_target_box[1])
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
@@ -433,17 +445,21 @@ class DaisyEye:
             if status:
                 w = track_bbox[0] + int((track_bbox[2] - track_bbox[0])/2)
                 h = track_bbox[1] + int((track_bbox[3] - track_bbox[1])/2)
+
                 if (w < res[0] and w >= 0 and h < res[1] and h >= 0):
                     distanceAtCenter =  bd[h][w]
                     self.__update_individual_position("NONE", track_bbox, distanceAtCenter, res)
 
             if video_out:
-                cv2.line(c, (w, 0),
-                        (w, int(res[1])), (0,255,0), 1)
-                cv2.line(c, (0, h), \
-                        (int(res[0]), h), (0,255,0), 1)
+                cv2.line(c, (w, 0), (w, res[1]), (0,255,0), 1)
+                cv2.line(c, (0, h), (res[0], h), (0,255,0), 1)
+                cv2.line(c, (0, head_h), (res[0], head_h), (0,0,0), 1)
+                cv2.line(c, (body_left_w, 0), (body_left_w, res[1]), (0,0,255), 1)
+                cv2.line(c, (body_right_w, 0), (body_right_w, res[1]), (0,0,255), 1)
+                cv2.line(c, (center_w, 0), (center_w, res[1]), (0,0,255), 1)
 
                 self.__draw_bbox(True, c, face_target_box, (255, 0, 0), "FACE_TARGET")
+                self.__draw_bbox(True, c, track_target_box, (255, 0, 0), "TRACK_TARGET")
                 self.__draw_bbox(status, c, track_bbox, (0, 255, 0), tracker)
                 self.__draw_bbox(person_found, c, face_bbox, (0, 0, 255), name)
 
@@ -463,6 +479,7 @@ class DaisyEye:
 
             key = cv2.waitKey(1) & 0xff
             if key == ord('q'):
+                self.__update_individual_position("STOP", track_bbox, distanceAtCenter, res)
                 break
 
         cv2.destroyAllWindows()

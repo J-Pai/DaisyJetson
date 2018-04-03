@@ -21,6 +21,7 @@ eye = None
 X_THRES = 100
 Z_CENTER = 1500
 Z_THRES = 100
+pid = -1
 
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
@@ -38,6 +39,8 @@ def daisy_action(data_queue):
             data = data_queue.get()
         if data:
             (string, bbox, distance, res) = data
+            if string == "STOP":
+                break
             center_x = int((bbox[0] + bbox[2]) / 2)
             center_y = int((bbox[1] + bbox[3]) / 2)
 
@@ -55,6 +58,7 @@ def daisy_action(data_queue):
             else:
                 print(spine.halt())
             data = None
+    print("Action Thread Exited")
 
 if __name__ == "__main__":
     #spine = DaisySpine()
@@ -64,7 +68,7 @@ if __name__ == "__main__":
     action_p = Process(target = daisy_action, args=(data, ))
     action_p.daemon = True
     action_p.start()
-    print(action_p.pid)
+    pid = action_p.pid
     begin_tracking("JessePai", data)
     action_p.terminate()
     print("Brain Terminated")
