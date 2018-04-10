@@ -26,7 +26,7 @@ pid = -1
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
     eye = DaisyEye(faces, data_queue, cam_num = -1, flipped = True)
-    eye.find_and_track_kinect(name, "CSRT", debug=False, video_out=False)
+    eye.find_and_track_kinect(name, "CSRT", debug=False, video_out=True)
     data_queue.close()
 
 def daisy_action(data_queue):

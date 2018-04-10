@@ -7,16 +7,13 @@ from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
 from pylibfreenect2 import setGlobalLogger
 
-setGlobalLogger(None)
-try:
-    print("OpenGL Pipeline")
-    from pylibfreenect2 import OpenGLPacketPipeline
-    pipeline = OpenGLPacketPipeline()
-    print("HELLO WORLD")
-except:
-    print("CPU Pipeline")
-    from pylibfreenect2 import CpuPacketPipeline
-    pipeline = CpuPacketPipeline()
+#setGlobalLogger(None)
+print("OpenGL Pipeline")
+from pylibfreenect2 import OpenGLPacketPipeline
+pipeline = OpenGLPacketPipeline()
+#print("CPU Pipeline")
+#from pylibfreenect2 import CpuPacketPipeline
+#pipeline = CpuPacketPipeline()
 
 EXPOSURE_1 = 0
 EXPOSURE_2 = 0
@@ -322,7 +319,7 @@ class DaisyEye:
                         overlap_area / self.__bbox_area(track_bbox))
 
             # small_c = self.__crop_frame(c, track_target_box)
-            small_c = self.__scale_frame(c, 0.5)
+            small_c = self.__scale_frame(c, 0.25)
 
             if person_found and face_count >= FACE_COUNT and overlap_pct < CORRECTION_THRESHOLD:
                 # bbox = (face_bbox[0] - track_target_box[0],
@@ -333,7 +330,7 @@ class DaisyEye:
                         new_track_bbox[1],
                         new_track_bbox[2] - new_track_bbox[0],
                         new_track_bbox[3] - new_track_bbox[1])
-                bbox = self.__scale_bbox(bbox, 0.5)
+                bbox = self.__scale_bbox(bbox, 0.25)
                 trackerObj = self.__init_tracker(small_c, bbox, tracker)
                 face_count = 0
 
@@ -352,7 +349,7 @@ class DaisyEye:
                 #        bbox[2] + track_target_box[0],
                 #        bbox[3] + track_target_box[1])
                 track_bbox = (bbox[0], bbox[1], bbox[2], bbox[3])
-                track_bbox = self.__scale_bbox(bbox, 2)
+                track_bbox = self.__scale_bbox(bbox, 4)
 
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
