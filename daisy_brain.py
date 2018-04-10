@@ -26,7 +26,7 @@ pid = -1
 def begin_tracking(name, data_queue):
     print("Begin Tracking")
     eye = DaisyEye(faces, data_queue, cam_num = -1, flipped = True)
-    eye.find_and_track_kinect(name, "CSRT", debug=False)
+    eye.find_and_track_kinect(name, "CSRT", debug=False, video_out=False)
     data_queue.close()
 
 def daisy_action(data_queue):
@@ -38,15 +38,15 @@ def daisy_action(data_queue):
         if not data_queue.empty():
             data = data_queue.get()
         if data:
-            (string, bbox, distance, res) = data
+            (string, bbox, center, distance, res) = data
             if string == "STOP":
                 break
-            center_x = int((bbox[0] + bbox[2]) / 2)
-            center_y = int((bbox[1] + bbox[3]) / 2)
+            center_x = center[0]
+            center_y = center[1]
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            print(center_x, res_center_x, distance, res)
+            print(center_x, res_center_x, center, distance, res)
             if center_x < res_center_x - X_THRES:
                 print(spine.turn(Dir.CW))
             elif center_x > res_center_x + X_THRES:
