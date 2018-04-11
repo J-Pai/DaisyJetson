@@ -51,16 +51,19 @@ def daisy_action(data_queue, debug=True):
             res_center_y = int(res[1] / 2)
             if debug:
                 print(center_x, res_center_x, center, distance, res)
+            out = None
             if center_x < res_center_x - X_THRES:
-                print(spine.turn(Dir.CW))
+                out = spine.turn(Dir.CW)
             elif center_x > res_center_x + X_THRES:
-                print(spine.turn(Dir.CCW))
+                out = spine.turn(Dir.CCW)
             elif distance > Z_CENTER + Z_THRES:
-                print(spine.forward())
+                out = spine.forward()
             elif distance < Z_CENTER - Z_THRES:
-                print(spine.backward())
+                out = spine.backward()
             else:
-                print(spine.halt())
+                out = spine.halt()
+            if debug and out is not None:
+                print(out)
             data = None
     print("Action Thread Exited")
 

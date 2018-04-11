@@ -73,15 +73,12 @@ class DaisySpine:
         return ret
 
     def forward(self):
-        print("Forward")
         return self.pass_byte(1)
 
     def backward(self):
-        print("Backward")
         return self.pass_byte(4)
 
     def halt(self):
-        print("Stopping")
         return self.pass_byte(0)
 
     def turn(self, d):
