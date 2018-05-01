@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import face_recognition
 import sys
+import zerorpc
 from multiprocessing import Queue
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
@@ -165,6 +166,11 @@ class DaisyEye:
             face_target_box = DEFAULT_FACE_TARGET_BOX,
             track_scaling = DEFAULT_SCALING,
             res = (RGB_W, RGB_H), video_out = True):
+        rpc = zerorpc.Client()
+        rpc.connect("tcp://0.0.0.0:4081")
+        if rpc.init_connection() != "connected":
+            print("Tracker No RPC")
+            return
 
         print("Starting Tracking")
 
@@ -202,6 +208,8 @@ class DaisyEye:
         body_right_w = 0
         center_w = 0
 
+        globalState = ""
+
         while True:
             timer = cv2.getTickCount()
 
@@ -217,6 +225,10 @@ class DaisyEye:
 
             face_bbox = None
             new_track_bbox = None
+
+            rpc_state = rpc.get_state()
+            if "track" not in rpc_state:
+                continue
 
             if face_process_frame:
                 small_c = self.__crop_frame(c, face_target_box)
@@ -280,7 +292,10 @@ class DaisyEye:
                 if (w < res[0] and w >= 0 and h < res[1] and h >= 0):
                     distanceAtCenter =  bd[h][w]
                     center = (w, h)
-                    self.__update_individual_position("NONE", track_bbox, center, distanceAtCenter, res)
+                    globalState = self.__update_individual_position(status, track_bbox, center, distanceAtCenter, res)
+
+            if globalState == "Fail":
+                break
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
@@ -313,13 +328,16 @@ class DaisyEye:
 
             key = cv2.waitKey(1) & 0xff
             if key == ord('q'):
-                self.__update_individual_position("STOP", track_bbox, distanceAtCenter, res)
+                self.__update_individual_position("STOP", None, None, None, res)
                 break
 
         cv2.destroyAllWindows()
         device.stop()
         device.close()
 
-    def __update_individual_position(self, str_pos, track_bbox, center, distance, res):
-        if self.data_queue is not None and self.data_queue.empty():
-            self.data_queue.put((str_pos, track_bbox, center, distance, res))
+    def __update_individual_position(self, status, track_bbox, center, distance, res):
+        if self.data_queue is None:
+            return "Fail"
+        if self.data_queue.empty():
+            self.data_queue.put((status, track_bbox, center, distance, res))
+            return "Success"

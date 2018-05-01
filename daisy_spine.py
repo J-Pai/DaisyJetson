@@ -114,12 +114,12 @@ if __name__ == "__main__":
         input_str = input()
         code = int(input_str)
         if code == 0:
-            spine.halt()
+            print(spine.halt())
         if code == 1:
-            spine.forward()
+            print(spine.forward())
         if code == 2:
-            spine.turn(Dir.CW)
+            print(spine.turn(Dir.CW))
         if code == 3:
-            spine.turn(Dir.CCW)
+            print(spine.turn(Dir.CCW))
         if code == 4:
-            spine.backward()
+            print(spine.backward())

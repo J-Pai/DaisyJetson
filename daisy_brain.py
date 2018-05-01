@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 import face_recognition
 import cv2
 from daisy_spine import DaisySpine
@@ -8,6 +8,7 @@ from daisy_eye import DaisyEye
 from multiprocessing import Process, Queue
 import time
 import argparse
+import zerorpc
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
@@ -32,17 +33,26 @@ def begin_tracking(name, data_queue, video=True):
     data_queue.close()
 
 def daisy_action(data_queue, debug=True):
+    rpc = zerorpc.Client()
+    rpc.connect("tcp://0.0.0.0:4081")
+    if rpc.init_connection() != "connected":
+        print("Action No RPC")
+        data_queue.put("Fail")
+        sys.exit()
     spine = DaisySpine()
     print("Getting Data")
     print("Debug: ", debug)
     print(spine.read_all_lines())
     data = None
     while True:
+        rpc_state = rpc.get_state()
         if not data_queue.empty():
             data = data_queue.get()
-        if data:
-            (string, bbox, center, distance, res) = data
-            if string == "STOP":
+        if "track" in rpc_state and data:
+            (status, bbox, center, distance, res) = data
+            if not status:
+                continue
+            if status == "STOP":
                 break
             center_x = center[0]
             center_y = center[1]
@@ -62,8 +72,10 @@ def daisy_action(data_queue, debug=True):
                 out = spine.backward()
             else:
                 out = spine.halt()
+            """
             if debug and out is not None:
                 print(out)
+            """
             data = None
     print("Action Thread Exited")
 
@@ -72,7 +84,6 @@ if __name__ == "__main__":
     parser.add_argument("--no-debug", action="store_const", const=True, help="Disable debug output")
     parser.add_argument("--no-video", action="store_const", const=True, help="Disable video output")
     args = parser.parse_args()
-
     print("Daisy's Brain is Starting ^_^")
     data = Queue()
     action_p = Process(target = daisy_action, args=(data, not args.no_debug, ))
