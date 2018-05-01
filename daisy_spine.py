@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import serial
 import struct
 from sys import argv
@@ -109,7 +111,15 @@ if __name__ == "__main__":
     print(spine.read_all_lines())
     spine.halt();
     while True:
-        # spine.forward()
         input_str = input()
-        if (len(input_str) > 0):
-            print(spine.move(int(input_str) * 10, int(input_str)))
+        code = int(input_str)
+        if code == 0:
+            spine.halt()
+        if code == 1:
+            spine.forward()
+        if code == 2:
+            spine.turn(Dir.CW)
+        if code == 3:
+            spine.turn(Dir.CCW)
+        if code == 4:
+            spine.backward()
