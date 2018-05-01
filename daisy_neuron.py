@@ -1,20 +1,19 @@
-import rpyc
-from rpyc.utils.server import ThreadedServer
+import zerorpc
 
-alexa_command = ""
+class DaisyNeuron(object):
+    state = ""
+    recveived = False
+    def __init__(self):
+        print("Setting Up RPC Server")
+        self.state = "idle"
+        self.received = False
+    def set_state(self, newState):
+        self.state = newState
+        self.received = False
+    def get_state(self):
+        self.received = True
+        return self.state
 
-class DaisyNeuron(rpyc.Service):
-    def __init__(self, name):
-        print("Created Service", name)
-    def exposed_get_alexa_command(self):
-        return alexa_command
-    def exposed_set_alexa_command(self, cmd):
-        alexa_command = cmd
-        return alexa_command
-    def exposed_clear_alexa_command(self):
-        alexa_command = ""
-        return "Cleared"
-
-if __name__ == "__main__":
-    server = ThreadedServer(DaisyNeuron, port=4081)
-    server.start()
+s = zerorpc.Server(DaisyNeuron())
+s.bind("tcp://0.0.0.0:4081")
+s.run()
