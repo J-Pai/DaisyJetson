@@ -1,18 +1,15 @@
-import zerorpc
+#!/usr/bin/env python3
 
-class DaisyNeuron(object):
-    state = ""
-    def __init__(self):
-        print("Setting Up RPC Server")
-        self.state = "idle"
-    def init_connection(self):
-        print("New Connection")
-        return "connected"
-    def set_state(self, newState):
-        self.state = newState
-    def get_state(self):
-        return self.state
+from multiprocessing.managers import BaseManager
+from queue import Queue
 
-s = zerorpc.Server(DaisyNeuron())
-s.bind("tcp://0.0.0.0:4081")
-s.run()
+class QueueManager(BaseManager):
+    pass
+
+image_queue = Queue()
+QueueManager.register('get_image_queue', callable=lambda:image_queue)
+manager = QueueManager(address=('', 4081), authkey=b'daisy')
+
+print("Server Started")
+server = manager.get_server()
+server.serve_forever()

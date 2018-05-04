@@ -2,8 +2,11 @@ import numpy as np
 import cv2
 import face_recognition
 import sys
-import zerorpc
+from filelock import Timeout, FileLock
+
 from multiprocessing import Queue
+from multiprocessing.managers import BaseManager
+from queue import Queue as ImageQueue
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
 from pylibfreenect2 import setGlobalLogger
@@ -26,11 +29,20 @@ FACE_COUNT = 0
 
 CORRECTION_THRESHOLD = 0.50
 
+file_path = "daisy_neuron.txt"
+lock_path = "daisy_neuron.lock"
+lock = FileLock(lock_path, timeout=1)
+
+class QueueManager(BaseManager):
+    pass
+
 class DaisyEye:
     cam = None
     known_faces = {}
     data_queue = None
     pipeline = None
+    manager = None
+    image_pipeline = None
 
     def __init__(self, faces, data_queue = None):
         for person in faces:
@@ -44,6 +56,12 @@ class DaisyEye:
 
         self.data_queue = data_queue
         self.pipeline = OpenGLPacketPipeline()
+
+        QueueManager.register('get_image_queue')
+        self.manager = QueueManager(address=('', 4081), authkey=b'daisy')
+        self.manager.connect()
+        self.image_pipeline = self.manager.get_image_queue()
+        print("Manager Connected")
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
@@ -165,13 +183,7 @@ class DaisyEye:
     def find_and_track_kinect(self, name, tracker = "CSRT",
             face_target_box = DEFAULT_FACE_TARGET_BOX,
             track_scaling = DEFAULT_SCALING,
-            res = (RGB_W, RGB_H), video_out = True):
-        rpc = zerorpc.Client()
-        rpc.connect("tcp://0.0.0.0:4081")
-        if rpc.init_connection() != "connected":
-            print("Tracker No RPC")
-            return
-
+            res = (RGB_W, RGB_H), video_out = True, stream_out = True):
         print("Starting Tracking")
 
         fn = Freenect2()
@@ -210,6 +222,9 @@ class DaisyEye:
 
         globalState = ""
 
+        # Following line creates an avi video stream of daisy's tracking
+        # out = cv2.VideoWriter('daisy_eye.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (960, 540))
+
         while True:
             timer = cv2.getTickCount()
 
@@ -225,10 +240,6 @@ class DaisyEye:
 
             face_bbox = None
             new_track_bbox = None
-
-            rpc_state = rpc.get_state()
-            if "track" not in rpc_state:
-                continue
 
             if face_process_frame:
                 small_c = self.__crop_frame(c, face_target_box)
@@ -299,7 +310,7 @@ class DaisyEye:
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
-            if video_out:
+            if video_out or stream_out:
                 cv2.line(c, (w, 0), (w, res[1]), (0,255,0), 1)
                 cv2.line(c, (0, h), (res[0], h), (0,255,0), 1)
                 cv2.line(c, (0, head_h), (res[0], head_h), (0,0,0), 1)
@@ -321,8 +332,13 @@ class DaisyEye:
                     failedTrackers += tracker + " "
                     cv2.putText(c, failedTrackers, (100, 80),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
-
-                cv2.imshow("color", c)
+                if stream_out:
+                    image = cv2.imencode('.jpg', c)[1].tostring()
+                    self.image_pipeline.put(image);
+                    # c.send("Thanks for connecting")
+                if video_out:
+                    # out.write(c)
+                    cv2.imshow("color", c)
 
             listener.release(frames)
 
@@ -331,6 +347,7 @@ class DaisyEye:
                 self.__update_individual_position("STOP", None, None, None, res)
                 break
 
+        self.so.close()
         cv2.destroyAllWindows()
         device.stop()
         device.close()

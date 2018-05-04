@@ -8,7 +8,11 @@ from daisy_eye import DaisyEye
 from multiprocessing import Process, Queue
 import time
 import argparse
-import zerorpc
+from filelock import Timeout, FileLock
+
+file_path = "daisy_neuron.txt"
+lock_path = "daisy_neuron.lock"
+lock = FileLock(lock_path, timeout=1)
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
@@ -25,30 +29,23 @@ Z_CENTER = 1500
 Z_THRES = 100
 pid = -1
 
-def begin_tracking(name, data_queue, video=True):
+def begin_tracking(name, data_queue, video=True, stream=True):
     print("Begin Tracking")
     print("Video: ", video)
     eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_kinect(name, "CSRT", video_out=video)
+    eye.find_and_track_kinect(name, "CSRT", video_out=video, stream_out=stream)
     data_queue.close()
 
 def daisy_action(data_queue, debug=True):
-    rpc = zerorpc.Client()
-    rpc.connect("tcp://0.0.0.0:4081")
-    if rpc.init_connection() != "connected":
-        print("Action No RPC")
-        data_queue.put("Fail")
-        sys.exit()
     spine = DaisySpine()
     print("Getting Data")
     print("Debug: ", debug)
     print(spine.read_all_lines())
     data = None
     while True:
-        rpc_state = rpc.get_state()
         if not data_queue.empty():
             data = data_queue.get()
-        if "track" in rpc_state and data:
+        if data:
             (status, bbox, center, distance, res) = data
             if not status:
                 continue
@@ -83,6 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start Daisy's Brain")
     parser.add_argument("--no-debug", action="store_const", const=True, help="Disable debug output")
     parser.add_argument("--no-video", action="store_const", const=True, help="Disable video output")
+    parser.add_argument("--no-stream", action="store_const", const=True, help="Disable stream output")
     args = parser.parse_args()
     print("Daisy's Brain is Starting ^_^")
     data = Queue()
@@ -90,6 +88,6 @@ if __name__ == "__main__":
     action_p.daemon = True
     action_p.start()
     pid = action_p.pid
-    begin_tracking("JessePai", data, not args.no_video)
+    begin_tracking("JessePai", data, not args.no_video, not args.no_stream)
     action_p.terminate()
     print("Brain Terminated +_+")
