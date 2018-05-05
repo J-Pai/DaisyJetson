@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
+from multiprocessing import Manager
 from queue import Queue
+import copy
 
-class QueueManager(BaseManager):
+class NeuronManager(SyncManager):
     pass
 
-image_queue = Queue()
-QueueManager.register('get_image_queue', callable=lambda:image_queue)
-manager = QueueManager(address=('', 4081), authkey=b'daisy')
+web_neuron = Manager().dict()
+
+NeuronManager.register('get_web_neuron', callable=lambda:web_neuron)
+manager = NeuronManager(address=('', 4081), authkey=b'daisy')
 
 print("Server Started")
 server = manager.get_server()

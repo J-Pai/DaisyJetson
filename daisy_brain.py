@@ -8,11 +8,6 @@ from daisy_eye import DaisyEye
 from multiprocessing import Process, Queue
 import time
 import argparse
-from filelock import Timeout, FileLock
-
-file_path = "daisy_neuron.txt"
-lock_path = "daisy_neuron.lock"
-lock = FileLock(lock_path, timeout=1)
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",

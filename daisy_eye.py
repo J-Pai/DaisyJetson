@@ -2,10 +2,9 @@ import numpy as np
 import cv2
 import face_recognition
 import sys
-from filelock import Timeout, FileLock
 
 from multiprocessing import Queue
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
 from queue import Queue as ImageQueue
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
@@ -29,11 +28,7 @@ FACE_COUNT = 0
 
 CORRECTION_THRESHOLD = 0.50
 
-file_path = "daisy_neuron.txt"
-lock_path = "daisy_neuron.lock"
-lock = FileLock(lock_path, timeout=1)
-
-class QueueManager(BaseManager):
+class NeuronManager(SyncManager):
     pass
 
 class DaisyEye:
@@ -42,7 +37,7 @@ class DaisyEye:
     data_queue = None
     pipeline = None
     manager = None
-    image_pipeline = None
+    web_neuron = None
 
     def __init__(self, faces, data_queue = None):
         for person in faces:
@@ -57,10 +52,11 @@ class DaisyEye:
         self.data_queue = data_queue
         self.pipeline = OpenGLPacketPipeline()
 
-        QueueManager.register('get_image_queue')
-        self.manager = QueueManager(address=('', 4081), authkey=b'daisy')
+        NeuronManager.register('get_web_neuron')
+        self.manager = NeuronManager(address=('', 4081), authkey=b'daisy')
         self.manager.connect()
-        self.image_pipeline = self.manager.get_image_queue()
+        self.web_neuron = self.manager.get_web_neuron()
+
         print("Manager Connected")
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
@@ -224,7 +220,7 @@ class DaisyEye:
 
         # Following line creates an avi video stream of daisy's tracking
         # out = cv2.VideoWriter('daisy_eye.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (960, 540))
-
+        # out.write(c)
         while True:
             timer = cv2.getTickCount()
 
@@ -334,10 +330,8 @@ class DaisyEye:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
                 if stream_out:
                     image = cv2.imencode('.jpg', c)[1].tostring()
-                    self.image_pipeline.put(image);
-                    # c.send("Thanks for connecting")
+                    self.web_neuron.update([('image', image)])
                 if video_out:
-                    # out.write(c)
                     cv2.imshow("color", c)
 
             listener.release(frames)
