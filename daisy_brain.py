@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 import sys
+import os
 import face_recognition
 import cv2
 from daisy_spine import DaisySpine
 from daisy_spine import Dir
 from daisy_eye import DaisyEye
 from multiprocessing import Process, Queue
+from multiprocessing.managers import SyncManager
 import time
 import argparse
+
+class NeuronManager(SyncManager):
+    pass
+NeuronManager.register('get_alexa_neuron')
 
 faces = {
     "JessePai": "./faces/JPai-1.jpg",
@@ -28,15 +34,22 @@ def begin_tracking(name, data_queue, video=True, stream=True):
     print("Begin Tracking")
     print("Video: ", video)
     eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_kinect(name, "CSRT", video_out=video, stream_out=stream)
+    eye.find_and_track_kinect(None, "CSRT", video_out=video, stream_out=stream)
     data_queue.close()
 
 def daisy_action(data_queue, debug=True):
+    manager = NeuronManager(address=('', 4081), authkey=b'daisy')
+    manager.connect()
+    alexa_neuron = manager.get_alexa_neuron()
+
+    alexa_neuron.update([('something', 'test')])
+
     spine = DaisySpine()
     print("Getting Data")
     print("Debug: ", debug)
     print(spine.read_all_lines())
     data = None
+
     while True:
         if not data_queue.empty():
             data = data_queue.get()

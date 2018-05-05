@@ -8,8 +8,8 @@ from queue import Empty
 
 class NeuronManager(SyncManager):
     pass
-
 NeuronManager.register('get_web_neuron')
+
 manager = NeuronManager(address=('', 4081), authkey=b'daisy')
 manager.connect()
 

@@ -31,6 +31,9 @@ CORRECTION_THRESHOLD = 0.50
 class NeuronManager(SyncManager):
     pass
 
+NeuronManager.register('get_web_neuron')
+NeuronManager.register('get_alexa_neuron')
+
 class DaisyEye:
     cam = None
     known_faces = {}
@@ -38,6 +41,7 @@ class DaisyEye:
     pipeline = None
     manager = None
     web_neuron = None
+    alexa_neuron = None
 
     def __init__(self, faces, data_queue = None):
         for person in faces:
@@ -52,10 +56,10 @@ class DaisyEye:
         self.data_queue = data_queue
         self.pipeline = OpenGLPacketPipeline()
 
-        NeuronManager.register('get_web_neuron')
         self.manager = NeuronManager(address=('', 4081), authkey=b'daisy')
         self.manager.connect()
         self.web_neuron = self.manager.get_web_neuron()
+        self.alexa_neuron = self.manager.get_alexa_neuron()
 
         print("Manager Connected")
 
@@ -236,6 +240,17 @@ class DaisyEye:
 
             face_bbox = None
             new_track_bbox = None
+            #
+            # If on idle set track_bbox to None
+            # And continue
+            #
+            if name is None:
+                if stream_out:
+                    c = self.__scale_frame(c, scale_factor = 0.5)
+                    image = cv2.imencode('.jpg', c)[1].tostring()
+                    self.web_neuron.update([('image', image)])
+                listener.release(frames)
+                continue
 
             if face_process_frame:
                 small_c = self.__crop_frame(c, face_target_box)
