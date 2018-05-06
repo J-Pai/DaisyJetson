@@ -27,8 +27,8 @@ except ConnectionRefusedError:
 
 faces = {
     "Jessie": "./faces/JPai-1.jpg",
-#    "Vlad": "./faces/Vlad.jpg",
-#    "TeddyMen": "./faces/TMen-1.jpg"
+#    "Vladimir": "./faces/Vlad.jpg",
+    "teddy": "./faces/Teddy-1.jpg"
 }
 
 name = "JessePai"
