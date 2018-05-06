@@ -42,8 +42,6 @@ def daisy_action(data_queue, debug=True):
     manager.connect()
     alexa_neuron = manager.get_alexa_neuron()
 
-    alexa_neuron.update([('something', 'test')])
-
     spine = DaisySpine()
     print("Getting Data")
     print("Debug: ", debug)
@@ -64,7 +62,7 @@ def daisy_action(data_queue, debug=True):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            if debug:
+            if False:
                 print(center_x, res_center_x, center, distance, res)
             out = None
             if center_x < res_center_x - X_THRES:

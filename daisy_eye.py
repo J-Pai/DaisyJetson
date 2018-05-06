@@ -46,7 +46,6 @@ class DaisyEye:
     def __init__(self, faces, data_queue = None):
         for person in faces:
             image = face_recognition.load_image_file(faces[person])
-            print(person)
             face_encoding_list = face_recognition.face_encodings(image)
             if len(face_encoding_list) > 0:
                 self.known_faces[person] = face_encoding_list[0]
@@ -144,39 +143,43 @@ class DaisyEye:
         (left, top, right, bottom) = bbox
         return (right - left) * (bottom - top)
 
-    TOP_DIST_THRES = 200
-    BOT_DIST_THRES = -200
-
     def __body_bbox(self, bigdepth, mid_width, mid_height, res):
-
         mid_dist = bigdepth[mid_height][mid_width]
-        top_thres = mid_dist + self.TOP_DIST_THRES
-        bot_thres = mid_dist + self.BOT_DIST_THRES
 
-        left = 0
-        top = 0
-        right = 0
-        bottom = 0
+        mid_col = bigdepth[:, mid_width]
 
-        for h in range(mid_height, 0, -1):
-            if bigdepth[h][mid_width] > top_thres:
-                top = h
-                break
-        for h in range(mid_height, res[1]):
-            if bigdepth[h][mid_width] < bot_thres:
-                bottom = h
-                break
-        bot_mid_dist = bigdepth[bottom][mid_width]
-        bot_thres = bot_mid_dist + self.TOP_DIST_THRES
-        for w in range(mid_width, 0, -1):
-            if bigdepth[bottom][w] > bot_thres:
-                left = w
-                break
-        for w in range(mid_width, res[0]):
-            if bigdepth[bottom][w] > bot_thres:
-                right = w
+        farther_pixels = np.argwhere(mid_col > mid_dist)
+
+        lower_bound = (farther_pixels + 1)[:-1]
+        upper_bound = (farther_pixels - 1)[1:]
+        mask = lower_bound <= upper_bound
+
+        upper_bound, lower_bound = upper_bound[mask], lower_bound[mask]
+
+        top_of_head = lower_bound[0]
+
+        body_mid_height = int((top_of_head + res[1])/2)
+        mid_row = bigdepth[body_mid_height, :]
+        body_mid_dist = bigdepth[body_mid_height][mid_width]
+
+        farther_pixels = np.argwhere(mid_row > body_mid_dist + 150)
+
+        lower_bound = (farther_pixels + 1)[:-1]
+        upper_bound = (farther_pixels - 1)[1:]
+        mask = lower_bound <= upper_bound
+
+        upper_bound, lower_bound = upper_bound[mask], lower_bound[mask]
+
+        target = None
+        for i in range(0, len(upper_bound)):
+            if upper_bound[i] >= mid_width and lower_bound[i] <= mid_width:
+                target = i
                 break
 
+        left = lower_bound[target]
+        top = top_of_head
+        right = upper_bound[target]
+        bottom = res[1]
 
         return (left, top, right, bottom)
 
@@ -185,6 +188,8 @@ class DaisyEye:
             track_scaling = DEFAULT_SCALING,
             res = (RGB_W, RGB_H), video_out = True, stream_out = True):
         print("Starting Tracking")
+
+        target = name
 
         fn = Freenect2()
         num_devices = fn.enumerateDevices()
@@ -238,27 +243,31 @@ class DaisyEye:
             bd = np.resize(bigdepth.asarray(np.float32), (1080, 1920))
             c = cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR)
 
-            face_bbox = None
-            new_track_bbox = None
             #
             # If on idle set track_bbox to None
             # And continue
             #
-            if name is None:
+
+            if target is None:
                 if stream_out:
                     c = self.__scale_frame(c, scale_factor = 0.5)
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
                 listener.release(frames)
+                bbox = None
+                track_bbox = None
                 continue
+
+            face_bbox = None
+            new_track_bbox = None
 
             if face_process_frame:
                 small_c = self.__crop_frame(c, face_target_box)
-                face_locations = face_recognition.face_locations(small_c, model="cnn")
+                face_locations = face_recognition.face_locations(small_c, number_of_times_to_upsample=0, model="cnn")
                 face_encodings = face_recognition.face_encodings(small_c, face_locations)
                 for face_encoding in face_encodings:
                     matches = face_recognition.compare_faces(
-                            [self.known_faces[name]], face_encoding, 0.6)
+                            [self.known_faces[target]], face_encoding, 0.6)
                     if len(matches) > 0 and matches[0]:
                         (top, right, bottom, left) = face_locations[0]
 
@@ -281,7 +290,6 @@ class DaisyEye:
                 overlap_area = self.__bbox_overlap(new_track_bbox, track_bbox)
                 overlap_pct = min(overlap_area / self.__bbox_area(new_track_bbox),
                         overlap_area / self.__bbox_area(track_bbox))
-
             small_c = self.__scale_frame(c, track_scaling)
             if new_track_bbox is not None and overlap_pct < CORRECTION_THRESHOLD:
                 bbox = (new_track_bbox[0],
@@ -289,7 +297,11 @@ class DaisyEye:
                         new_track_bbox[2] - new_track_bbox[0],
                         new_track_bbox[3] - new_track_bbox[1])
                 bbox = self.__scale_bbox(bbox, track_scaling)
-                trackerObj = self.__init_tracker(small_c, bbox, tracker)
+
+                if bbox[0] < 1 or bbox[1] < 1 or bbox[2] < 1 or bbox[3] < 1:
+                    print("Bad bbox", bbox, new_track_bbox)
+                else:
+                    trackerObj = self.__init_tracker(small_c, bbox, tracker)
 
             status = False
 
@@ -331,7 +343,7 @@ class DaisyEye:
 
                 self.__draw_bbox(True, c, face_target_box, (255, 0, 0), "FACE_TARGET")
                 self.__draw_bbox(status, c, track_bbox, (0, 255, 0), tracker)
-                self.__draw_bbox(face_bbox is not None, c, face_bbox, (0, 0, 255), name)
+                self.__draw_bbox(face_bbox is not None, c, face_bbox, (0, 0, 255), target)
                 self.__draw_bbox(face_bbox is not None, c, new_track_bbox, (255, 0, 0), "BODY")
 
                 c = self.__scale_frame(c, scale_factor = 0.5)
