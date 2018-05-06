@@ -53,6 +53,7 @@ def daisy_action(data_queue, debug=True):
     print("Debug: ", debug)
     print(spine.read_all_lines())
     data = None
+    prev_statement = ""
 
     while True:
         state = None
@@ -76,11 +77,14 @@ def daisy_action(data_queue, debug=True):
                     out = spine.backward()
                 else:
                     out = spine.halt()
-                if debug and out is not None:
-                    print("Moving:", direction)
-                    print(out)
+                if debug:
+                    statement = ("Moving:", direction, out)
             elif debug:
-                print("Idling")
+                statement = "Idling"
+
+            if debug and statement != prev_statement:
+                prev_statement = statement
+                print(statement)
             continue
         if not data_queue.empty():
             data = data_queue.get()
@@ -95,8 +99,7 @@ def daisy_action(data_queue, debug=True):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            if debug:
-                print(center_x, res_center_x, center, distance, res)
+
             out = None
             if center_x < res_center_x - X_THRES:
                 out = spine.turn(Dir.CW)
@@ -108,8 +111,13 @@ def daisy_action(data_queue, debug=True):
                 out = spine.backward()
             else:
                 out = spine.halt()
-            if debug and out is not None:
-                print(out)
+
+            if debug:
+                statement = (center_x, res_center_x, center, distance, res, out)
+
+            if debug and statement != prev_statement:
+                prev_statement = statement
+                print(statement)
             data = None
     print("Action Thread Exited")
 

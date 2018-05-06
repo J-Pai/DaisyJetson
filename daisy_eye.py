@@ -356,7 +356,7 @@ class DaisyEye:
                 self.__draw_bbox(True, c, face_target_box, (255, 0, 0), "FACE_TARGET")
                 self.__draw_bbox(status, c, track_bbox, (0, 255, 0), tracker)
                 self.__draw_bbox(face_bbox is not None, c, face_bbox, (0, 0, 255), target)
-                self.__draw_bbox(face_bbox is not None, c, new_track_bbox, (255, 0, 0), "BODY")
+                self.__draw_bbox(face_bbox is not None, c, new_track_bbox, (0, 255, 255), "BODY")
 
                 c = self.__scale_frame(c, scale_factor = 0.5)
 
