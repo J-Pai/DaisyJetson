@@ -252,10 +252,6 @@ class DaisyEye:
             bd = np.resize(bigdepth.asarray(np.float32), (1080, 1920))
             c = cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR)
 
-            #
-            # If on idle set track_bbox to None
-            # And continue
-            #
             if self.connected and 'name' in self.alexa_neuron.keys():
                 newTarget = self.alexa_neuron.get('name');
                 if newTarget != target:
@@ -281,6 +277,7 @@ class DaisyEye:
 
                 bbox = None
                 track_bbox = None
+                self.__update_individual_position("WAITING", None, None, None, res)
                 continue
 
             face_bbox = None

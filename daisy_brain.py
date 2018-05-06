@@ -66,8 +66,10 @@ def daisy_action(data_queue, debug=True):
             if state == "moving":
                 direction = currNeuron.get("direction")
         if state is None or state == "idle" or state == "moving":
-            already_waiting = False
+            statement = ""
+
             if direction is not None:
+                already_waiting = False
                 out = None
                 if direction == "left" or direction == "counterclockwise":
                     out = spine.turn(Dir.CCW)
@@ -81,8 +83,11 @@ def daisy_action(data_queue, debug=True):
                     out = spine.halt()
                 if debug:
                     statement = ("Moving:", direction, out)
-            elif debug:
-                statement = "Idling"
+
+            if state == "idle" and not already_waiting:
+                already_waiting = True
+                out = spine.halt()
+                statement = ("Idling", out)
 
             if debug and statement != prev_statement:
                 prev_statement = statement
