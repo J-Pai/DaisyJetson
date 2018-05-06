@@ -260,7 +260,6 @@ class DaisyEye:
                 target = None
                 target = self.alexa_neuron.get('name');
                 if target is not None and target not in self.known_faces:
-                    print("Individual not in database:", target)
                     target = None
             if target is None:
                 if self.connected and stream_out:
