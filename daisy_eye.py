@@ -297,11 +297,7 @@ class DaisyEye:
                         new_track_bbox[2] - new_track_bbox[0],
                         new_track_bbox[3] - new_track_bbox[1])
                 bbox = self.__scale_bbox(bbox, track_scaling)
-
-                if bbox[0] < 1 or bbox[1] < 1 or bbox[2] < 1 or bbox[3] < 1:
-                    print("Bad bbox", bbox, new_track_bbox)
-                else:
-                    trackerObj = self.__init_tracker(small_c, bbox, tracker)
+                trackerObj = self.__init_tracker(small_c, bbox, tracker)
 
             status = False
 
