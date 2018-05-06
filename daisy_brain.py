@@ -26,7 +26,7 @@ except ConnectionRefusedError:
     connected = False
 
 faces = {
-    "Jessie": "./faces/JPai-1.jpg",
+    "Jessie": "./faces/JPai-2.jpg",
 #    "Vladimir": "./faces/Vlad.jpg",
     "teddy": "./faces/Teddy-1.jpg"
 }
