@@ -27,7 +27,7 @@ except ConnectionRefusedError:
 
 faces = {
     "Jessie": "./faces/JPai-2.jpg",
-#    "Vladimir": "./faces/Vlad.jpg",
+    "Vladimir": "./faces/Vlad-1.jpg",
     "teddy": "./faces/Teddy-1.jpg"
 }
 
@@ -54,6 +54,7 @@ def daisy_action(data_queue, debug=True):
     print(spine.read_all_lines())
     data = None
     prev_statement = ""
+    already_waiting = False
 
     while True:
         state = None
@@ -94,26 +95,33 @@ def daisy_action(data_queue, debug=True):
                 continue
             if status == "STOP":
                 break
-            center_x = center[0]
-            center_y = center[1]
 
-            res_center_x = int(res[0] / 2)
-            res_center_y = int(res[1] / 2)
-
-            out = None
-            if center_x < res_center_x - X_THRES:
-                out = spine.turn(Dir.CW)
-            elif center_x > res_center_x + X_THRES:
-                out = spine.turn(Dir.CCW)
-            elif distance > Z_CENTER + Z_THRES:
-                out = spine.forward()
-            elif distance < Z_CENTER - Z_THRES:
-                out = spine.backward()
-            else:
+            if status == "WAITING" and not already_waiting:
+                already_waiting = True
                 out = spine.halt()
+                statement = ("Waiting for TARGET", out)
+            elif status != "WAITING":
+                already_waiting = False
+                center_x = center[0]
+                center_y = center[1]
 
-            if debug:
-                statement = (center_x, res_center_x, center, distance, res, out)
+                res_center_x = int(res[0] / 2)
+                res_center_y = int(res[1] / 2)
+
+                out = None
+                if center_x < res_center_x - X_THRES:
+                    out = spine.turn(Dir.CW)
+                elif center_x > res_center_x + X_THRES:
+                    out = spine.turn(Dir.CCW)
+                elif distance > Z_CENTER + Z_THRES:
+                    out = spine.forward()
+                elif distance < Z_CENTER - Z_THRES:
+                    out = spine.backward()
+                else:
+                    out = spine.halt()
+
+                if debug:
+                    statement = (center_x, res_center_x, center, distance, res, out)
 
             if debug and statement != prev_statement:
                 prev_statement = statement

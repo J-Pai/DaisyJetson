@@ -257,10 +257,19 @@ class DaisyEye:
             # And continue
             #
             if self.connected and 'name' in self.alexa_neuron.keys():
-                target = None
-                target = self.alexa_neuron.get('name');
+                newTarget = self.alexa_neuron.get('name');
+                if newTarget != target:
+                    target = newTarget
+                    listener.release(frames)
+                    trackerObj = None
+                    face_process_frame = True
+
+                    bbox = None
+                    track_bbox = None
+                    continue
                 if target is not None and target not in self.known_faces:
                     target = None
+
             if target is None:
                 if self.connected and stream_out:
                     c = self.__scale_frame(c, scale_factor = 0.5)
@@ -315,6 +324,9 @@ class DaisyEye:
                 bbox = self.__scale_bbox(bbox, track_scaling)
                 trackerObj = self.__init_tracker(small_c, bbox, tracker)
 
+            if trackerObj is None:
+                self.__update_individual_position("WAITING", None, None, None, res)
+
             status = False
 
             if trackerObj is not None:
@@ -339,6 +351,8 @@ class DaisyEye:
                     distanceAtCenter =  bd[h][w]
                     center = (w, h)
                     globalState = self.__update_individual_position(status, track_bbox, center, distanceAtCenter, res)
+
+
 
             if globalState == "Fail":
                 break
