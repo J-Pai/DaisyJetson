@@ -161,8 +161,11 @@ class DaisyEye:
 
         upper_bound, lower_bound = upper_bound[mask], lower_bound[mask]
 
-        adjust = 25
-        top_of_head = 1 if lower_bound[0] - adjust  < 1 else lower_bound[0] - adjust
+        adjust = 100
+        top_of_head = mid_height
+        if len(lower_bound) > 0:
+            top_of_head = lower_bound[0]
+        top_of_head = 1 if top_of_head - adjust < 1 else top_of_head - adjust
 
         body_mid_height = int((top_of_head + res[1])/2)
         mid_row = bigdepth[body_mid_height, :]
