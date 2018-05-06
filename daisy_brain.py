@@ -14,10 +14,20 @@ import argparse
 class NeuronManager(SyncManager):
     pass
 NeuronManager.register('get_alexa_neuron')
+connected = True
+alexa_neuron = None
+manager = NeuronManager(address=('', 4081), authkey=b'daisy')
+try:
+    manager.connect()
+    alexa_neuron = manager.get_alexa_neuron()
+    print("Brain connected to neuron manager.")
+except ConnectionRefusedError:
+    print("Brain not connected to neuron manager.")
+    connected = False
 
 faces = {
-    "JessePai": "./faces/JPai-1.jpg",
-#    "VladMok": "./faces/Vlad.jpg",
+    "Jessie": "./faces/JPai-1.jpg",
+#    "Vlad": "./faces/Vlad.jpg",
 #    "TeddyMen": "./faces/TMen-1.jpg"
 }
 
@@ -38,10 +48,6 @@ def begin_tracking(name, data_queue, video=True, stream=True):
     data_queue.close()
 
 def daisy_action(data_queue, debug=True):
-    manager = NeuronManager(address=('', 4081), authkey=b'daisy')
-    manager.connect()
-    alexa_neuron = manager.get_alexa_neuron()
-
     spine = DaisySpine()
     print("Getting Data")
     print("Debug: ", debug)
@@ -49,6 +55,33 @@ def daisy_action(data_queue, debug=True):
     data = None
 
     while True:
+        state = None
+        direction = None
+        if connected:
+            currNeuron = alexa_neuron.copy()
+            if "state" in currNeuron:
+                state = currNeuron.get("state")
+            if state == "moving":
+                direction = currNeuron.get("direction")
+        if state is None or state == "idle" or state == "moving":
+            if direction is not None:
+                out = None
+                if direction == "left":
+                    out = spine.turn(Dir.CCW)
+                elif direction == "right":
+                    out = spine.turn(Dir.CW)
+                elif direction == "forward":
+                    out = spine.forward()
+                elif direction == "backward":
+                    out = spine.backward()
+                else:
+                    out = spine.halt()
+                if debug and out is not None:
+                    print("Moving:", direction)
+                    print(out)
+            elif debug:
+                print("Idling")
+            continue
         if not data_queue.empty():
             data = data_queue.get()
         if data:
@@ -62,7 +95,7 @@ def daisy_action(data_queue, debug=True):
 
             res_center_x = int(res[0] / 2)
             res_center_y = int(res[1] / 2)
-            if False:
+            if debug:
                 print(center_x, res_center_x, center, distance, res)
             out = None
             if center_x < res_center_x - X_THRES:
@@ -75,10 +108,8 @@ def daisy_action(data_queue, debug=True):
                 out = spine.backward()
             else:
                 out = spine.halt()
-            """
             if debug and out is not None:
                 print(out)
-            """
             data = None
     print("Action Thread Exited")
 
@@ -89,6 +120,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-stream", action="store_const", const=True, help="Disable stream output")
     args = parser.parse_args()
     print("Daisy's Brain is Starting ^_^")
+    if connected:
+        # Clear alexa neuron.
+        alexa_neuron.clear()
     data = Queue()
     action_p = Process(target = daisy_action, args=(data, not args.no_debug, ))
     action_p.daemon = True

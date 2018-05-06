@@ -39,6 +39,7 @@ class DaisyEye:
     known_faces = {}
     data_queue = None
     pipeline = None
+    connected = True
     manager = None
     web_neuron = None
     alexa_neuron = None
@@ -56,11 +57,15 @@ class DaisyEye:
         self.pipeline = OpenGLPacketPipeline()
 
         self.manager = NeuronManager(address=('', 4081), authkey=b'daisy')
-        self.manager.connect()
-        self.web_neuron = self.manager.get_web_neuron()
-        self.alexa_neuron = self.manager.get_alexa_neuron()
-
-        print("Manager Connected")
+        try:
+            self.manager.connect()
+            self.web_neuron = self.manager.get_web_neuron()
+            self.web_neuron.clear()
+            self.alexa_neuron = self.manager.get_alexa_neuron()
+            print("Eye connected to neuron manager.")
+        except ConnectionRefusedError:
+            print("Eye not connected to neuron manager.")
+            self.connected = False
 
     def __draw_bbox(self, valid, frame, bbox, color, text):
         if not valid:
@@ -247,9 +252,13 @@ class DaisyEye:
             # If on idle set track_bbox to None
             # And continue
             #
-
+            if self.connected and 'name' in self.alexa_neuron.keys():
+                target = self.alexa_neuron.get('name');
+                if target is not None and target not in self.known_faces:
+                    print("Individual not in database:", target)
+                    target = None
             if target is None:
-                if stream_out:
+                if self.connected and stream_out:
                     c = self.__scale_frame(c, scale_factor = 0.5)
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
@@ -351,7 +360,7 @@ class DaisyEye:
                     failedTrackers += tracker + " "
                     cv2.putText(c, failedTrackers, (100, 80),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
-                if stream_out:
+                if self.connected and stream_out:
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
                 if video_out:
