@@ -66,9 +66,9 @@ def daisy_action(data_queue, debug=True):
         if state is None or state == "idle" or state == "moving":
             if direction is not None:
                 out = None
-                if direction == "left":
+                if direction == "left" or direction == "counterclockwise":
                     out = spine.turn(Dir.CCW)
-                elif direction == "right":
+                elif direction == "right" or direction == "clockwise":
                     out = spine.turn(Dir.CW)
                 elif direction == "forward":
                     out = spine.forward()

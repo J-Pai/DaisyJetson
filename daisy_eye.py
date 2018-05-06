@@ -161,7 +161,8 @@ class DaisyEye:
 
         upper_bound, lower_bound = upper_bound[mask], lower_bound[mask]
 
-        top_of_head = lower_bound[0]
+        adjust = 25
+        top_of_head = 1 if lower_bound[0] - adjust  < 1 else lower_bound[0] - adjust
 
         body_mid_height = int((top_of_head + res[1])/2)
         mid_row = bigdepth[body_mid_height, :]
@@ -253,6 +254,7 @@ class DaisyEye:
             # And continue
             #
             if self.connected and 'name' in self.alexa_neuron.keys():
+                target = None
                 target = self.alexa_neuron.get('name');
                 if target is not None and target not in self.known_faces:
                     print("Individual not in database:", target)
@@ -263,6 +265,9 @@ class DaisyEye:
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
                 listener.release(frames)
+                trackerObj = None
+                face_process_frame = True
+
                 bbox = None
                 track_bbox = None
                 continue
