@@ -13,3 +13,6 @@ This repository contains the code ncessary for Daisy to track objects and indivi
 [Trackers in OpenCV-contrib 3.4.1](https://docs.opencv.org/trunk/d0/d0a/classcv_1_1Tracker.html)
 
 Directions: Download all files. Combine zip parts into 1 zip file. Unzip model file. Place files in the directory that contains holds this repository.
+
+## Setup
+Must store faces inside of a directory called faces/
