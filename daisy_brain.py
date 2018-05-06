@@ -66,6 +66,7 @@ def daisy_action(data_queue, debug=True):
             if state == "moving":
                 direction = currNeuron.get("direction")
         if state is None or state == "idle" or state == "moving":
+            already_waiting = False
             if direction is not None:
                 out = None
                 if direction == "left" or direction == "counterclockwise":
