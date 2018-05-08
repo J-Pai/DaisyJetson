@@ -27,8 +27,8 @@ except ConnectionRefusedError:
 
 faces = {
     "Jessie": "./faces/JPai-2.jpg",
-    "teddy": "./faces/Teddy-1.jpg"
-    "Vladimir": "./faces/Vlad-1.jpg",
+    "teddy": "./faces/Teddy-1.jpg",
+    "Vladimir": "./faces/Vlad-1.jpg"
 }
 
 name = "JessePai"
@@ -38,13 +38,14 @@ eye = None
 X_THRES = 100
 Z_CENTER = 1500
 Z_THRES = 100
+STANDING_THRES = 850
 pid = -1
 
-def begin_tracking(name, data_queue, video=True, stream=True):
+def begin_tracking(name, data_queue, video=True):
     print("Begin Tracking")
     print("Video: ", video)
     eye = DaisyEye(faces, data_queue)
-    eye.find_and_track_kinect(None, "CSRT", video_out=video, stream_out=stream)
+    eye.find_and_track_kinect(None, "CSRT", video_out=video)
     data_queue.close()
 
 def daisy_action(data_queue, debug=True):
@@ -56,16 +57,22 @@ def daisy_action(data_queue, debug=True):
     prev_statement = ""
     already_waiting = False
 
+    standing = True
+    prev_standing = True
+
     while True:
         state = None
         direction = None
+        currCount = 0
         if connected:
             currNeuron = alexa_neuron.copy()
             if "state" in currNeuron:
                 state = currNeuron.get("state")
+            if "count" in currNeuron:
+                currCount = currNeuron.get("count")
             if state == "moving":
                 direction = currNeuron.get("direction")
-        if state is None or state == "idle" or state == "moving":
+        if state is None or state == "idle" or state == "moving" or state == "exercise":
             statement = ""
 
             if direction is not None:
@@ -83,8 +90,28 @@ def daisy_action(data_queue, debug=True):
                     out = spine.halt()
                 if debug:
                     statement = ("Moving:", direction, out)
+            if state == "exercise":
+                already_waiting = False
+                if not data_queue.empty():
+                    data = data_queue.get()
+                if data:
+                    (status, bbox, center, distance, res) = data
+                    if status != "WAITING":
+                        center_y = center[1]
+                        if center_y < STANDING_THRES:
+                            standing = True
+                        if center_y > STANDING_THRES:
+                            standing = False
+
+                        if standing != prev_standing:
+                            prev_standing = standing
+                            currCount = currCount + 1
+                            alexa_neuron.update([('count', currCount)])
+                            print("Num Squats:", currCount)
 
             if state == "idle" and not already_waiting:
+                print("Waiting")
+                alexa_neuron.update([('tracking', False)])
                 already_waiting = True
                 out = spine.halt()
                 statement = ("Idling", out)
@@ -103,6 +130,8 @@ def daisy_action(data_queue, debug=True):
                 break
 
             if status == "WAITING" and not already_waiting:
+                print("Waiting")
+                alexa_neuron.update([('tracking', False)])
                 already_waiting = True
                 out = spine.halt()
                 statement = ("Waiting for TARGET", out)
@@ -139,7 +168,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start Daisy's Brain")
     parser.add_argument("--no-debug", action="store_const", const=True, help="Disable debug output")
     parser.add_argument("--no-video", action="store_const", const=True, help="Disable video output")
-    parser.add_argument("--no-stream", action="store_const", const=True, help="Disable stream output")
     args = parser.parse_args()
     print("Daisy's Brain is Starting ^_^")
     if connected:
@@ -150,6 +178,6 @@ if __name__ == "__main__":
     action_p.daemon = True
     action_p.start()
     pid = action_p.pid
-    begin_tracking("JessePai", data, not args.no_video, not args.no_stream)
+    begin_tracking("JessePai", data, not args.no_video)
     action_p.terminate()
     print("Brain Terminated +_+")

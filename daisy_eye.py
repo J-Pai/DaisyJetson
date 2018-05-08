@@ -195,7 +195,7 @@ class DaisyEye:
     def find_and_track_kinect(self, name, tracker = "CSRT",
             face_target_box = DEFAULT_FACE_TARGET_BOX,
             track_scaling = DEFAULT_SCALING,
-            res = (RGB_W, RGB_H), video_out = True, stream_out = True):
+            res = (RGB_W, RGB_H), video_out = True):
         print("Starting Tracking")
 
         target = name
@@ -252,7 +252,7 @@ class DaisyEye:
             bd = np.resize(bigdepth.asarray(np.float32), (1080, 1920))
             c = cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR)
 
-            if self.connected and 'name' in self.alexa_neuron.keys():
+            if self.connected:
                 newTarget = self.alexa_neuron.get('name');
                 if newTarget != target:
                     target = newTarget
@@ -267,7 +267,7 @@ class DaisyEye:
                     target = None
 
             if target is None:
-                if self.connected and stream_out:
+                if self.connected:
                     c = self.__scale_frame(c, scale_factor = 0.5)
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
@@ -320,6 +320,7 @@ class DaisyEye:
                         new_track_bbox[3] - new_track_bbox[1])
                 bbox = self.__scale_bbox(bbox, track_scaling)
                 trackerObj = self.__init_tracker(small_c, bbox, tracker)
+                self.alexa_neuron.update([('tracking', True)])
 
             if trackerObj is None:
                 self.__update_individual_position("WAITING", None, None, None, res)
@@ -356,7 +357,7 @@ class DaisyEye:
 
             fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
-            if video_out or stream_out:
+            if video_out or self.connected:
                 cv2.line(c, (w, 0), (w, res[1]), (0,255,0), 1)
                 cv2.line(c, (0, h), (res[0], h), (0,255,0), 1)
                 cv2.line(c, (0, head_h), (res[0], head_h), (0,0,0), 1)
@@ -378,7 +379,7 @@ class DaisyEye:
                     failedTrackers += tracker + " "
                     cv2.putText(c, failedTrackers, (100, 80),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,142), 1)
-                if self.connected and stream_out:
+                if self.connected:
                     image = cv2.imencode('.jpg', c)[1].tostring()
                     self.web_neuron.update([('image', image)])
                 if video_out:

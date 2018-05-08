@@ -1,9 +1,14 @@
 <html>
     <head>
-        <title>Video Streaming Demonstration</title>
+        <title>Daisy Dashboard</title>
     </head>
     <body>
-        <h1>Video Streaming Demonstration</h1>
+        <h1>Daisy Dashboard</h1>
+        <p>Current User: {{ currUser }}</p>
+        <h2>Video Stream</h2>
         <img src="{{ url_for('video_feed') }}">
+        <h2>Graphs</h2>
+        {{ mem_graph | safe }}
+        {{ ex_graph | safe }}
     </body>
 </html>
