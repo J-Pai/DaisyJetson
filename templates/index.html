@@ -7,7 +7,10 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='side-menu.css') }}" />
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            .pure-menu-item{
+            #menu .pure-menu-selected, #menu .pure-menu-heading {
+                background: #333
+            }
+            .pure-menu-item {
                 height: auto
             }
         </style>
@@ -59,6 +62,23 @@
                                 href="https://github.com/J-Pai/JetsonIPReporter"
                                 target="_blank">
                                 IP Tool
+                            </a>
+                        </li>
+                        <li class="pure-menu-heading menu-item-divided pure-menu-selected">Services</li>
+                        <li>
+                            <a
+                                class="pure-menu-link"
+                                href="https://developer.amazon.com/alexa?"
+                                target="_blank">
+                                Alexa Console
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                class="pure-menu-link"
+                                href="https://mlab.com/"
+                                target="_blank">
+                                mLab
                             </a>
                         </li>
                     </ul>
