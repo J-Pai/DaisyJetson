@@ -28,7 +28,7 @@ try:
     print("Eye connected to neuron manager.")
 except ConnectionRefusedError:
     print("Eye not connected to neuron manager.")
-    self.connected = False
+    connected = False
 
 
 app = Flask(__name__)
