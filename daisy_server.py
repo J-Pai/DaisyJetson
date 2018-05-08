@@ -108,17 +108,20 @@ def mem_game_graph():
     img = io.BytesIO()
 
     plt.savefig(img, format='png', bbox_extra_artists=(legend,), bbox_inches='tight')
+
+    plt.close(fig)
+
     img.seek(0)
 
     imgData = base64.b64encode(img.getvalue()).decode()
 
     img.close()
 
-    return '<img src="data:image/png;base64, {}">'.format(imgData)
+    return '<img class="pure-img" src="data:image/png;base64, {}">'.format(imgData)
 
 def exercise_graph():
     if not connected:
-        return '<p>Manager is not connected<p>'
+        return 'Manager is not connected'
 
     alexa_neuron = manager.get_alexa_neuron()
     record = get_EXERCISE_RECORD(alexa_neuron.get('user'))
@@ -146,11 +149,13 @@ def exercise_graph():
     plt.savefig(img, format='png', bbox_extra_artists=(legend,), bbox_inches='tight')
     img.seek(0)
 
+    plt.close(fig)
+
     imgData = base64.b64encode(img.getvalue()).decode()
 
     img.close()
 
-    return '<img src="data:image/png;base64, {}">'.format(imgData)
+    return '<img class="pure-img" src="data:image/png;base64, {}">'.format(imgData)
 
 
 if __name__ == "__main__":
